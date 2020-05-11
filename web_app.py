@@ -10,6 +10,8 @@ from flask import Flask, request, url_for, redirect, render_template, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user
 from passlib.hash import bcrypt
+from datetime import now, timezone
+from permission_names import *
 
 #HASHKEY_FILENAME = "hashkey.dat"
 SECRET_KEY_FILENAME = "secretkey.dat"
@@ -47,6 +49,20 @@ class Projects(db.Model):
     student_default_access = db.Column(db.Integer, default=0)
     time_created = db.Column(db.DateTime)
     time_updated = db.Column(db.DateTime)
+
+class ProjectPermissions(db.Model):
+    __tablename__ = "project_permissions"
+    project_id = db.Column(db.Integer, db.ForeignKey("projects.project_id"), primary_key=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), primary_key=True)
+    access_level = db.Column(db.DateTime)
+    time_assigned = db.Column(db.DateTime)
+
+def create_project(owner_id, visitor_default_access=):
+    current_time = now(timezone.utc)
+    new_project = Projects(owner_time_created = current_time,
+
+def assign_project_access(project_id, user_id, access_level):
+    
 
 @app.route("/")
 def index():
