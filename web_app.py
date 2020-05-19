@@ -1,16 +1,16 @@
 """
 Web app to provide feedback from and to students and teachers
 Author: Joseph Grace
-Version: 1.0
-Created 05/05/2020
+Version: 1.1
+Updated 19/05/2020
 """
 
 import os
 from flask import Flask, request, url_for, redirect, render_template, flash, session
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user
+from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
 from passlib.hash import bcrypt
-from datetime import now, timezone
+from datetime import datetime, timezone
 from permission_names import *
 
 #HASHKEY_FILENAME = "hashkey.dat"
@@ -41,12 +41,13 @@ login_manager.init_app(app)
 def user_loader(user_id):
     return Users.query.get(int(user_id))
 
+
 class Projects(db.Model):
     __tablename__ = "projects"
     project_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     owner_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable = False)
-    visitor_default_access = db.Column(db.Integer, default=0)
-    student_default_access = db.Column(db.Integer, default=0)
+    default_access = db.Column(db.Integer, default=PROJECT_DEFAULT_ACCESS)
+    student_access = db.Column(db.Integer, default=PROJECT_STUDENT_ACCESS)
     time_created = db.Column(db.DateTime)
     time_updated = db.Column(db.DateTime)
 
@@ -57,21 +58,48 @@ class ProjectPermissions(db.Model):
     access_level = db.Column(db.DateTime)
     time_assigned = db.Column(db.DateTime)
 
-def create_project(owner_id, visitor_default_access=):
-    current_time = now(timezone.utc)
-    new_project = Projects(owner_time_created = current_time,
+
+def create_project(owner_id,
+                   default_access=PROJECT_DEFAULT_ACCESS,
+                   student_access=PROJECT_STUDENT_ACCESS,
+                   class_access=PROJECT_CLASS_ACCESS,
+                   teacher_access=PROJECT_TEACHER_ACCESS):
+    current_time = datetime.now(timezone.utc)
+    new_project = Projects(owner_id=owner_id,
+                           time_created = current_time,
+                           default_access=default_access,
+                           student_acces=student_access)
+    db.session.add(new_project)
+    db.session.commit()
+
+
+def update_project_time(project_id):
+    current_time = datetime.now(timezone.utc)
+    project = Projects.query.filter_by(project_id=project_id).first()
+    if not project is None:
+        project.time_updated = current_time
+        db.session.commit()
 
 def assign_project_access(project_id, user_id, access_level):
+    existing_permission = ProjectPermissions.filter_by(project_id=project_id).first
+    if existing_permission is None:
+        new_permission = ProjectPermissions(project_id=project_id,
+                                            user_id=user_id,
+                                            access_level=access_level)
+        db.session.add(new_permission)
+    elif existing_permision.access_level != access_level:
+        existing_permission.access_level = access_level
+    db.session.commit()
     
 
 @app.route("/")
 def index():
-    return "This is the home page"
+    return render_template("index.html")
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return "You've accessed the dashboard!"
+    return "Current user: {}".format(current_user.username)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -113,6 +141,7 @@ def login():
 
 @app.route("/logout")
 def logout():
+    print("Logged out user", current_user, flush=True)
     logout_user()
     return redirect("/")
 
