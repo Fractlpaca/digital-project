@@ -1,16 +1,20 @@
 """
 Web app to provide feedback from and to students and teachers
 Author: Joseph Grace
-Version: 1.1
+Version: 1.2
 Updated 19/05/2020
 """
 
 import os
-from flask import Flask, request, url_for, redirect, render_template, flash, session
+from flask import Flask, request, url_for, redirect, render_template, flash, session, abort
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
 from passlib.hash import bcrypt
 from datetime import datetime, timezone
+
+#Own imports:
 from permission_names import *
 
 #HASHKEY_FILENAME = "hashkey.dat"
@@ -27,12 +31,14 @@ db = SQLAlchemy(app) #connect to database
 #Using user structure for flask_login:
 class Users(UserMixin, db.Model):
     __tablename__ = "users"
-    user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    username = db.Column(db.String(20), nullable=False, unique=True)
-    password_hash = db.Column(db.String(128), nullable = False)
-    site_access = db.Column(db.Integer, default=0)
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(20), nullable=False, unique=True)
+    password_hash = Column(String(128), nullable = False)
+    site_access = Column(Integer, default=0)
     def get_id(self):
         return str(self.user_id)
+    projects_owned = relationship("Projects", back_populates="owner")
+    project_permissions = relationship("ProjectPermissions")
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -44,33 +50,45 @@ def user_loader(user_id):
 
 class Projects(db.Model):
     __tablename__ = "projects"
-    project_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    owner_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), nullable = False)
-    default_access = db.Column(db.Integer, default=PROJECT_DEFAULT_ACCESS)
-    student_access = db.Column(db.Integer, default=PROJECT_STUDENT_ACCESS)
-    time_created = db.Column(db.DateTime)
-    time_updated = db.Column(db.DateTime)
+    project_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50))
+    owner_id = Column(Integer, ForeignKey("users.user_id"), nullable = False)
+    owner = relationship("Users", back_populates="projects_owned")
+    default_access = Column(Integer, default=PROJECT_DEFAULT_ACCESS)
+    student_access = Column(Integer, default=PROJECT_STUDENT_ACCESS)
+    time_created = Column(DateTime)
+    time_updated = Column(DateTime)
+    user_permissions = relationship("ProjectPermissions")
 
 class ProjectPermissions(db.Model):
     __tablename__ = "project_permissions"
-    project_id = db.Column(db.Integer, db.ForeignKey("projects.project_id"), primary_key=True)
-    owner_id = db.Column(db.Integer, db.ForeignKey("users.user_id"), primary_key=True)
-    access_level = db.Column(db.DateTime)
-    time_assigned = db.Column(db.DateTime)
+    project_id = Column(Integer, ForeignKey("projects.project_id"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
+    access_level = Column(Integer)
+    time_assigned = Column(DateTime)
 
 
-def create_project(owner_id,
+def create_project(name,
+                   owner_id,
                    default_access=PROJECT_DEFAULT_ACCESS,
                    student_access=PROJECT_STUDENT_ACCESS,
                    class_access=PROJECT_CLASS_ACCESS,
                    teacher_access=PROJECT_TEACHER_ACCESS):
     current_time = datetime.now(timezone.utc)
-    new_project = Projects(owner_id=owner_id,
-                           time_created = current_time,
+    new_project = Projects(name=name,
+                           owner_id=owner_id,
+                           time_created=current_time,
                            default_access=default_access,
-                           student_acces=student_access)
+                           student_access=student_access)
     db.session.add(new_project)
     db.session.commit()
+    owner_permission_level = ProjectPermissions(user_id=owner_id,
+                                                project_id=new_project.project_id,
+                                                access_level=OWNER,
+                                                time_assigned=current_time)
+    db.session.add(owner_permission_level)
+    db.session.commit()
+    return new_project
 
 
 def update_project_time(project_id):
@@ -99,7 +117,7 @@ def index():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return "Current user: {}".format(current_user.username)
+    return render_template("dash.html", username=current_user.username, projects_owned=current_user.projects_owned)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -144,6 +162,35 @@ def logout():
     print("Logged out user", current_user, flush=True)
     logout_user()
     return redirect("/")
+
+@app.route("/newProject", methods=["GET", "POST"])
+@login_required
+def newProject():
+    if request.args:
+        name = request.args.get("name","Untitled Project")
+        owner_id = current_user.user_id
+        new_project = create_project(name=name,
+                                     owner_id=owner_id)
+        return redirect("/project/{}".format(new_project.project_id))
+    return "Needs a redirect"
+        
+@app.route("/project/<project_id_string>")
+def project(project_id_string):
+    project_id = int(project_id_string)
+    project = Projects.query.filter_by(project_id=project_id).first()
+    if project is None:
+        abort(404)
+    if current_user is None:
+        access_level = project.default_access
+    else:
+        permission = ProjectPermissions.query.filter_by(user_id=current_user.user_id, project_id=project_id).first()
+        if permission is None:
+            access_level = project.student_access
+        else:
+            access_level = permission.access_level
+    if access_level < CAN_VIEW:
+        abort(404)
+    return "Project Name: {}    Owner: {}    Access Level: {}".format(project.name, project.owner.username, access_level)
 
 def generate_key(filename, size):
     file = open(filename,"wb")

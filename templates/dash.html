@@ -1,9 +1,13 @@
 <!doctype html>
 
 <head>
-	
+	<title>Your Dashboard</title>
 </head>
 
 <body>
-	
+	User: {{username}}<br>
+	<h3>Your Projects:</h3>
+	{% for project in projects_owned %}
+	<a href='{{"project/{}".format(project.project_id)}}'>{{project.name}}</a>
+	{% endfor %}
 </body>
