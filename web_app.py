@@ -6,7 +6,7 @@ Updated 19/05/2020
 """
 
 import os
-from flask import Flask, request, url_for, redirect, render_template, flash, session, abort
+from flask import Flask, request, url_for, redirect, render_template, flash, session, abort, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
@@ -21,8 +21,10 @@ from permission_names import *
 SECRET_KEY_FILENAME = "secretkey.dat"
 BCRYPT_ROUNDS = 14
 
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__) ) #This is the directory of the project
-database_file = "sqlite:///{}".format(os.path.join(PROJECT_DIR,"database.db")) #Get path to database file
+APP_DIR = os.path.dirname(os.path.abspath(__file__) ) #This is the directory of the project
+PROJECTS_FOLDER = os.path.join(APP_DIR,"projects")
+ALLOWED_FILE_EXTENSIONS = ["mp3","txt","docx","pdf","gif","jpg","png","zip","tar","tar.gz",]
+database_file = "sqlite:///{}".format(os.path.join(APP_DIR,"database.db")) #Get path to database file
 
 app = Flask(__name__) #define app
 app.config["SQLALCHEMY_DATABASE_URI"] = database_file #give path of database to app
@@ -86,6 +88,7 @@ def create_project(name,
                                                 project_id=new_project.project_id,
                                                 access_level=OWNER,
                                                 time_assigned=current_time)
+    project_folder = os.mkdir(os.path.join(PROJECTS_FOLDER,str(new_project.project_id)))
     db.session.add(owner_permission_level)
     db.session.commit()
     return new_project
@@ -180,7 +183,7 @@ def newProject():
         return redirect("/project/{}".format(new_project.project_id))
     return redirect("/dashboard")
         
-@app.route("/project/<project_id_string>")
+@app.route("/project/<project_id_string>", methods=["GET", "POST"])
 def project(project_id_string):
     project_id = int(project_id_string)
     project = Projects.query.filter_by(project_id=project_id).first()
@@ -199,6 +202,13 @@ def project(project_id_string):
     if access_level < CAN_VIEW:
         abort(404)
         #To prevent knoledge of existence of project
+    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
+    if request.args:
+        download_filename=request.args.get("filename", None)
+        if download_filename is not None:
+            print("Sending File From",project_dir, download_filename,flush=True)
+            return send_from_directory(project_dir, download_filename,as_attachment=True)
+        return redirect(f"/project/{project_id_string}")
     return render_template("project.html",
                            project=project,
                            is_logged_in=is_logged_in,
@@ -219,7 +229,7 @@ def get_key(filename):
     return key
 
 def file_location(path):
-    return os.path.join(PROJECT_DIR, path)
+    return os.path.join(APP_DIR, path)
 
 if __name__ == "__main__":
     #if not os.path.exists(file_location(HASHKEY_FILENAME)):
