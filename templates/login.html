@@ -1,13 +1,16 @@
 <!doctype html>
+{% extends "base.html" %}
 
 <head>
 	<title>Login</title>
 </head>
 
 <body>
+    {%block content %}
 	<form id = "login" method="POST" action="/login">
         <input type="text" name="username" placeholder="Username" required></input><br>
         <input type="password" name="password" placeholder="Password" required></input><br>
         <input type="submit" value="Login"></input>
     </form>
+    {% endblock %}
 </body>

@@ -112,12 +112,15 @@ def assign_project_access(project_id, user_id, access_level):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    print(current_user is None, flush=True)
+    is_logged_in = current_user.is_authenticated
+    username = current_user.username if is_logged_in else None
+    return render_template("index.html", is_logged_in=is_logged_in, username=username)
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dash.html", username=current_user.username, projects_owned=current_user.projects_owned)
+    return render_template("dash.html", username=current_user.username, projects_owned=current_user.projects_owned, is_logged_in=True)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -135,9 +138,12 @@ def register():
             db.session.add(new_user)
             db.session.commit()
             print("Added new user:",new_user, flush=True)
+            logout_user()
             login_user(new_user)
             return redirect(url_for("dashboard"))
-    return render_template("register.html")
+    is_logged_in = current_user.is_authenticated
+    username = current_user.username if is_logged_in else None
+    return render_template("register.html", is_logged_in=is_logged_in, username=username)
 
 @app.route("/login", methods = ["GET", "POST"])
 def login():
@@ -155,7 +161,7 @@ def login():
             else:
                 print("Error 3", flush=True)
                 #Error 2 and 3 must be presented as the same error for security reasons.
-    return render_template("login.html")    
+    return render_template("login.html", is_logged_in=False)    
 
 @app.route("/logout")
 def logout():
@@ -172,7 +178,7 @@ def newProject():
         new_project = create_project(name=name,
                                      owner_id=owner_id)
         return redirect("/project/{}".format(new_project.project_id))
-    return "Needs a redirect"
+    return redirect("/dashboard")
         
 @app.route("/project/<project_id_string>")
 def project(project_id_string):
@@ -180,17 +186,25 @@ def project(project_id_string):
     project = Projects.query.filter_by(project_id=project_id).first()
     if project is None:
         abort(404)
-    if current_user is None:
-        access_level = project.default_access
-    else:
+    is_logged_in = current_user.is_authenticated
+    if is_logged_in:
         permission = ProjectPermissions.query.filter_by(user_id=current_user.user_id, project_id=project_id).first()
         if permission is None:
             access_level = project.student_access
         else:
             access_level = permission.access_level
+    else:
+        access_level = project.default_access
+    access_level_string = access_message[access_level]
     if access_level < CAN_VIEW:
         abort(404)
-    return "Project Name: {}    Owner: {}    Access Level: {}".format(project.name, project.owner.username, access_level)
+        #To prevent knoledge of existence of project
+    return render_template("project.html",
+                           project=project,
+                           is_logged_in=is_logged_in,
+                           username=(current_user.username if is_logged_in else None),
+                           access_level=access_level,
+                           access_level_string=access_level_string)
 
 def generate_key(filename, size):
     file = open(filename,"wb")

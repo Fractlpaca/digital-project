@@ -1,12 +1,12 @@
 <!doctype html>
+{% extends "base.html" %}
 
 <head>
 	<title>Feedback Title</title>
 </head>
 
 <body>
-	<a href='{{url_for("login")}}'>Login</a><br>
-	<a href='{{url_for("register")}}'>Register</a><br>
-	<a href='{{url_for("dashboard")}}'>Dashboard</a><br>
-	<a href='{{url_for("logout")}}'>Logout</a>
+	{% block content %}
+	This is the home page. Ta-da!
+	{% endblock %}
 </body>
