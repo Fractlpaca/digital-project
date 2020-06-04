@@ -1,15 +1,10 @@
-<!doctype html>
 {% extends "base.html" %}
 
-<head>
-	<title>Your Dashboard</title>
-</head>
+{% block title %}Dashboard{% endblock %}
 
-<body>
-	{% block content %}
-	<h3>Your Projects:</h3>
-	{% for project in projects_owned %}
-	<a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
-	{% endfor %}
-	{% endblock %}
-</body>
+{% block content %}
+    <h3>Your Projects:</h3>
+    {% for project in projects_owned %}
+        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
+    {% endfor %}
+{% endblock %}

@@ -1,12 +1,9 @@
-<!doctype html>
 {% extends "base.html" %}
-<head>
-	<title>{{project.name}}</title>
-</head>
 
-<body>
-    {% block content %}
-        Project Name: {{project.name}}<br>
-        Access Level: {{access_level_string}}
-	{% endblock %}
-</body>
+{% block title %}{{project.name}}{% endblock %}
+
+{% block content %}
+    Project Name: {{project.name}}<br>
+    Access Level: {{access_level_string}}<br>
+    <iframe title="File Viewer" src="{{view_route}}"></iframe>
+{% endblock %}

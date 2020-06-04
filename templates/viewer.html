@@ -1,0 +1,24 @@
+<!doctype html>
+
+<head>
+	<title>File Viewer</title>
+	<meta charset="UTF-8">
+</head>
+
+<body>
+    {% block file_nav %}
+	<nav>
+    {% for name, url in parent_directories %}
+    <{% if loop.last %}strong{% else %}a{% endif %} href='{{url}}'>
+    {% if loop.index0 == 0 %}
+    root
+    {% else %}
+    {{name}}
+    {% endif %}
+    </{% if loop.last %}strong{% else %}a{% endif %}>/
+    {% endfor %}
+	</nav>
+	{% endblock %}
+	{% block content %}
+	{% endblock %}
+</body>

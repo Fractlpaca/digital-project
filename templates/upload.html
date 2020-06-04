@@ -1,0 +1,8 @@
+{% extends "project.html" %}
+
+{% block upload_form %}
+<form method='POST' enctype=multipart/form-data action='/project/{{project_id_str}}/upload'>
+    <input type='file' name='file'>
+    <input type='submit'>
+</form>
+{% endblock %}

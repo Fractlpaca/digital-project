@@ -6,13 +6,14 @@ Updated 19/05/2020
 """
 
 import os
-from flask import Flask, request, url_for, redirect, render_template, flash, session, abort, send_from_directory
+from flask import Flask, request, url_for, redirect, render_template, flash, session, abort, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
 from passlib.hash import bcrypt
 from datetime import datetime, timezone
+from werkzeug.utils import secure_filename
 
 #Own imports:
 from permission_names import *
@@ -61,6 +62,14 @@ class Projects(db.Model):
     time_created = Column(DateTime)
     time_updated = Column(DateTime)
     user_permissions = relationship("ProjectPermissions")
+    def access_level(self, user_id=None):
+        if user_id is None:
+            return self.default_access
+        project_permission = ProjectPermissions.query.filter_by(project_id=self.project_id,
+                                                                user_id=user_id).first()
+        if project_permission is None:
+            return self.student_access
+        return project_permission.access_level
 
 class ProjectPermissions(db.Model):
     __tablename__ = "project_permissions"
@@ -111,7 +120,11 @@ def assign_project_access(project_id, user_id, access_level):
     elif existing_permision.access_level != access_level:
         existing_permission.access_level = access_level
     db.session.commit()
-    
+
+def obtain_access_level(user_id, is_logged_in, location_type, location_id):
+    if location_type == "project":
+        project = Projects.query.filter_by(project_id=location_id)
+        
 
 @app.route("/")
 def index():
@@ -182,39 +195,119 @@ def newProject():
                                      owner_id=owner_id)
         return redirect("/project/{}".format(new_project.project_id))
     return redirect("/dashboard")
-        
-@app.route("/project/<project_id_string>", methods=["GET", "POST"])
-def project(project_id_string):
-    project_id = int(project_id_string)
+
+
+def handle_project_id(project_id, threshold_access=CAN_VIEW):
     project = Projects.query.filter_by(project_id=project_id).first()
     if project is None:
         abort(404)
     is_logged_in = current_user.is_authenticated
     if is_logged_in:
-        permission = ProjectPermissions.query.filter_by(user_id=current_user.user_id, project_id=project_id).first()
-        if permission is None:
-            access_level = project.student_access
-        else:
-            access_level = permission.access_level
+        access_level = project.access_level(current_user.user_id)
     else:
         access_level = project.default_access
-    access_level_string = access_message[access_level]
-    if access_level < CAN_VIEW:
+    if access_level < threshold_access:
         abort(404)
         #To prevent knoledge of existence of project
+    return (project, access_level, is_logged_in)
+
+@app.route("/project/<project_id_string>", methods=["GET", "POST"])
+def project(project_id_string):
+    project_id = int(project_id_string)
+    project, access_level, is_logged_in=handle_project_id(project_id)
+    access_level_string = access_message[access_level]
     project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-    if request.args:
-        download_filename=request.args.get("filename", None)
-        if download_filename is not None:
-            print("Sending File From",project_dir, download_filename,flush=True)
-            return send_from_directory(project_dir, download_filename,as_attachment=True)
-        return redirect(f"/project/{project_id_string}")
+    filesystem_dir = os.path.join(project_dir,"file_system")
+    #if request.args:
+        #download_filename=request.args.get("filename", None)
+        #if download_filename is not None:
+            #print("Sending File From",project_dir, download_filename,flush=True)
+            #return send_from_directory(project_dir, download_filename,as_attachment=True)
+        #return redirect(f"/project/{project_id}")
+    view_route = f"/project/{project_id}/view/"
     return render_template("project.html",
                            project=project,
                            is_logged_in=is_logged_in,
                            username=(current_user.username if is_logged_in else None),
                            access_level=access_level,
-                           access_level_string=access_level_string)
+                           access_level_string=access_level_string,
+                           view_route=view_route)
+
+
+@app.route("/project/<project_id_string>/view/",methods=["GET"])
+@app.route("/project/<project_id_string>/view/<path:path>",methods=["GET"])
+def viewProject(project_id_string, path=""):
+    print("Directory is",path+".",flush=True)
+    project_id=int(project_id_string)
+    base_url = f"/project/{project_id}/view/{path}"
+    project, access_level, is_logged_in=handle_project_id(project_id)
+    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
+    filesystem_dir = os.path.join(project_dir,"filesystem")   
+    inner_path = os.path.realpath(os.path.join(filesystem_dir, path))
+    print(inner_path, flush=True)
+    if not inner_path.startswith(filesystem_dir):
+        abort(403)
+    if not os.path.exists(inner_path):
+        abort(404)
+    parent_directories = [("root", f"/project/{project_id}/view")]
+    folders = path.strip("/").split("/")
+    if folders == [""]: folders = []
+    for i in range(len(folders)):
+        parent_directories.append((folders[i], f"/project/{project_id}/view/"+"/".join(folders[:i+1])))
+    print(parent_directories, flush=True)
+    if os.path.isdir(inner_path):
+        files = os.listdir(inner_path)
+        folder_urls = []
+        file_urls = []
+        for file in files:
+            possible_dir = os.path.join(inner_path, secure_filename(file))
+            if os.path.isdir(possible_dir):
+                folder_urls.append((file, f"{base_url}/{file}"))
+            else:
+                file_urls.append((file, f"{base_url}/{file}"))
+        if access_level < CAN_EDIT:
+            collaborator = False
+            upload_url = None
+        else:
+            collaborator = True
+            upload_url = f"/project/{project_id}/upload/{path}"
+        return render_template("viewFolder.html",
+                               parent_directories=parent_directories,
+                               folder_name=path.split("/")[-1],
+                               folder_urls=folder_urls,
+                               file_urls=file_urls,
+                               collaborator=collaborator,
+                               upload_url=upload_url)
+    else:
+        if request.args.get("download", None) is not None:
+            return send_file(inner_path, as_attachment=True)
+        download_url = f"{base_url}?download"
+        return render_template("viewFile.html",
+                               parent_directories=parent_directories,
+                               filename=path.split("/")[-1],
+                               download_url=download_url)
+
+@app.route("/project/<project_id_string>/upload/", methods=["GET", "POST"])
+@app.route("/project/<project_id_string>/upload/<path:path>", methods=["GET", "POST"])
+def uploadToProject(project_id_string, path=""):
+    print("Directory is",path+".",flush=True)
+    project_id=int(project_id_string)
+    base_url = f"/project/{project_id}/view/{path}"
+    project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
+    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
+    filesystem_dir = os.path.join(project_dir,"filesystem")   
+    inner_path = os.path.realpath(os.path.join(filesystem_dir, path))
+    print(inner_path, flush=True)
+    if not inner_path.startswith(filesystem_dir):
+        abort(403)
+    if not os.path.exists(inner_path):
+        abort(404)    
+    if request.method=="POST":
+        file = request.files["file"]
+        filename = secure_filename(file.filename)
+        print(type(file), flush=True)
+        file.save(os.path.join(inner_path,filename))
+    return redirect(f"/project/{project_id}/view/")
 
 def generate_key(filename, size):
     file = open(filename,"wb")

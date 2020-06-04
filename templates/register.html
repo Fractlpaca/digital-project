@@ -1,15 +1,11 @@
-<!doctype html>
 {% extends "base.html" %}
-<head>
-	<title>Register</title>
-</head>
 
-<body>
-    {% block content %}
-	<form id="register" method="POST" action="/register">
+{% block title %}Register{% endblock %}
+
+{% block content %}
+    <form id="register" method="POST" action="/register">
         <input type="text" name="username" placeholder="Username" required></input><br>
         <input type="password" name="password" placeholder="Password" required></input><br>
         <input type="submit" value="Register"></input>
     </form>
-    {% endblock %}
-</body>
+{% endblock %}

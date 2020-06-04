@@ -1,0 +1,22 @@
+{% extends "viewer.html" %}
+
+{% block content %}
+    {% if folder_urls|length !=0 %}
+        <h3>Folders</h3>
+        {% for name, url in folder_urls %}
+            <a href='{{url}}'>{{name}}</a><br>
+        {% endfor %}
+    {% endif %}
+    {% if file_urls|length !=0 %}
+        <h3>Files</h3>
+        {% for name, url in file_urls %}
+            <a href='{{url}}'>{{name}}</a><br>
+        {% endfor %}
+    {% endif %}
+    {% if collaborator %}
+        <form method='POST' enctype=multipart/form-data action='{{upload_url}}'>
+            <input type='file' name='file'>
+            <input type='submit'>
+        </form>
+    {% endif %}
+{% endblock %}
