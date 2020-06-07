@@ -2,7 +2,7 @@
 Web app to provide feedback from and to students and teachers
 Author: Joseph Grace
 Version: 1.2
-Updated 19/05/2020
+Updated 08/06/2020
 """
 
 import os
@@ -97,7 +97,10 @@ def create_project(name,
                                                 project_id=new_project.project_id,
                                                 access_level=OWNER,
                                                 time_assigned=current_time)
-    project_folder = os.mkdir(os.path.join(PROJECTS_FOLDER,str(new_project.project_id)))
+    project_folder = os.path.join(PROJECTS_FOLDER,str(new_project.project_id))
+    os.mkdir(project_folder)
+    project_filesystem = os.path.join(project_folder,"filesystem")
+    os.mkdir(project_filesystem)
     db.session.add(owner_permission_level)
     db.session.commit()
     return new_project
@@ -111,20 +114,16 @@ def update_project_time(project_id):
         db.session.commit()
 
 def assign_project_access(project_id, user_id, access_level):
-    existing_permission = ProjectPermissions.filter_by(project_id=project_id).first
+    existing_permission = ProjectPermissions.query.filter_by(project_id=project_id, user_id=user_id).first()
     if existing_permission is None:
         new_permission = ProjectPermissions(project_id=project_id,
                                             user_id=user_id,
                                             access_level=access_level)
         db.session.add(new_permission)
-    elif existing_permision.access_level != access_level:
+    elif existing_permission.access_level != access_level:
         existing_permission.access_level = access_level
     db.session.commit()
-
-def obtain_access_level(user_id, is_logged_in, location_type, location_id):
-    if location_type == "project":
-        project = Projects.query.filter_by(project_id=location_id)
-        
+    update_project_time(project_id)
 
 @app.route("/")
 def index():
@@ -216,22 +215,18 @@ def project(project_id_string):
     project_id = int(project_id_string)
     project, access_level, is_logged_in=handle_project_id(project_id)
     access_level_string = access_message[access_level]
-    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-    filesystem_dir = os.path.join(project_dir,"file_system")
-    #if request.args:
-        #download_filename=request.args.get("filename", None)
-        #if download_filename is not None:
-            #print("Sending File From",project_dir, download_filename,flush=True)
-            #return send_from_directory(project_dir, download_filename,as_attachment=True)
-        #return redirect(f"/project/{project_id}")
+    #project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
+    #filesystem_dir = os.path.join(project_dir,"file_system")
     view_route = f"/project/{project_id}/view/"
+    permission_route = f"/project/{project_id}/permission"
     return render_template("project.html",
                            project=project,
                            is_logged_in=is_logged_in,
                            username=(current_user.username if is_logged_in else None),
                            access_level=access_level,
                            access_level_string=access_level_string,
-                           view_route=view_route)
+                           view_route=view_route,
+                           permission_route=permission_route)
 
 
 @app.route("/project/<project_id_string>/view/",methods=["GET"])
@@ -307,7 +302,29 @@ def uploadToProject(project_id_string, path=""):
         filename = secure_filename(file.filename)
         print(type(file), flush=True)
         file.save(os.path.join(inner_path,filename))
+        update_project_time(project_id)
     return redirect(f"/project/{project_id}/view/")
+
+@login_required
+@app.route("/project/<project_id_string>/permission", methods=["GET", "POST"])
+def projectPermission(project_id_string):
+    project_id=int(project_id_string)
+    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+    if request.form:
+        added_username = request.form.get("username", None)
+        if added_username is not None:
+            added_user = Users.query.filter_by(username=added_username).first()
+            if added_user is not None:
+                existing_access = project.access_level(added_user.user_id)
+                if existing_access >= access_level:
+                    return redirect(f"/project/{project_id}")
+                new_access = int(request.form.get("access_level", None))
+                print(added_user.username, new_access,flush=True)
+                if new_access < NO_ACCESS or new_access > SUB_OWNER:
+                    return redirect(f"/project/{project_id}")
+                assign_project_access(project_id, added_user.user_id, new_access)
+    return redirect(f"/project/{project_id}")
+
 
 def generate_key(filename, size):
     file = open(filename,"wb")

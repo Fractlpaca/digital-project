@@ -6,4 +6,17 @@
     Project Name: {{project.name}}<br>
     Access Level: {{access_level_string}}<br>
     <iframe title="File Viewer" src="{{view_route}}"></iframe>
+    {% if access_level >= 6 %}
+        <form action="{{permission_route}}" method="POST">
+            <input type="text" name="username" required>
+            <select name="access_level" required>
+                <option value=0>Totally Banned</option>
+                <option value=1>Banned</option>
+                <option value=2>Can View</option>
+                <option value=3>Can Comment</option>
+                <option value=5>Can Edit</option>
+                <option value=6>Sub-owner</option>
+            <input type="submit" value="Change Access">
+        </form>
+    {% endif %}
 {% endblock %}
