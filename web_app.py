@@ -312,6 +312,7 @@ def viewProject(project_id_string, path=""):
                                filename=path.split("/")[-1],
                                download_url=download_url)
 
+
 @app.route("/project/<project_id_string>/upload/", methods=["GET", "POST"])
 @app.route("/project/<project_id_string>/upload/<path:path>", methods=["GET", "POST"])
 def uploadToProject(project_id_string, path=""):
@@ -335,6 +336,7 @@ def uploadToProject(project_id_string, path=""):
         update_project_time(project_id)
     return redirect(f"/project/{project_id}/view/{path}")
 
+
 @app.route("/project/<project_id_string>/create/", methods=["GET", "POST"])
 @app.route("/project/<project_id_string>/create/<path:path>", methods=["GET", "POST"])
 def createProjectDir(project_id_string, path=""):
@@ -355,7 +357,9 @@ def createProjectDir(project_id_string, path=""):
             abort(403)
         os.makedirs(absolute_path, exist_ok=True)
         return redirect(f"/project/{project_id}/view/{path}/{new_dir}")
-    return redirect(f"/project/{project_id}/view/{path}")    
+    return redirect(f"/project/{project_id}/view/{path}")  
+
+
 @app.route("/project/<project_id_string>/delete/", methods=["GET", "POST"])
 @app.route("/project/<project_id_string>/delete/<path:path>", methods=["GET", "POST"])
 def deleteProjectObject(project_id_string, path=""):
@@ -374,7 +378,11 @@ def deleteProjectObject(project_id_string, path=""):
         print("paths:",outer_path, delete_path, absolute_path, flush=True)
         if (not absolute_path.startswith(filesystem_dir)) or absolute_path == filesystem_dir:
             abort(403)
-        shutil.rmtree(absolute_path)
+        if os.path.exists(absolute_path):
+            if os.path.isdir(absolute_path):
+                shutil.rmtree(absolute_path)
+            else:
+                os.remove(absolute_path)
     return redirect(f"/project/{project_id}/view/{path}")
 
 @login_required

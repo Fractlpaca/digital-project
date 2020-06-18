@@ -18,7 +18,12 @@
     {% endif %}
     <h3>Files</h3>
     {% for name, url in file_urls %}
-        <a href='{{url}}'>{{name}}</a><br>
+        <a href='{{url}}'>{{name}}</a>
+        <form method="POST" action={{delete_url}}>
+            <input type="hidden" value="{{name}}" name="name" required>
+            <input type="submit" value="Delete">
+        </form>
+        <br>
     {% endfor %}
     {% if collaborator %}
         <form method='POST' enctype=multipart/form-data action='{{upload_url}}'>
