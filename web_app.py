@@ -1,14 +1,15 @@
 """
 Web app to provide feedback from and to students and teachers
 Author: Joseph Grace
-Version: 1.2
+Version: 1.3
 Updated 08/06/2020
 """
 
 import os
+import shutil
 from flask import Flask, request, url_for, redirect, render_template, flash, session, abort, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, or_
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
 from passlib.hash import bcrypt
@@ -41,7 +42,7 @@ class Users(UserMixin, db.Model):
     def get_id(self):
         return str(self.user_id)
     projects_owned = relationship("Projects", back_populates="owner")
-    project_permissions = relationship("ProjectPermissions")
+    project_permissions = relationship("ProjectPermissions", back_populates="user")
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -61,7 +62,7 @@ class Projects(db.Model):
     student_access = Column(Integer, default=PROJECT_STUDENT_ACCESS)
     time_created = Column(DateTime)
     time_updated = Column(DateTime)
-    user_permissions = relationship("ProjectPermissions")
+    user_permissions = relationship("ProjectPermissions", back_populates="project")
     def access_level(self, user_id=None):
         if user_id is None:
             return self.default_access
@@ -70,6 +71,9 @@ class Projects(db.Model):
         if project_permission is None:
             return self.student_access
         return project_permission.access_level
+    
+    def user_permission_pairs(self):
+        return sorted([(permission.user,permission.access_level) for permission in self.user_permissions],key=lambda x: (-x[1],x[0]))
 
 class ProjectPermissions(db.Model):
     __tablename__ = "project_permissions"
@@ -77,6 +81,8 @@ class ProjectPermissions(db.Model):
     user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
     access_level = Column(Integer)
     time_assigned = Column(DateTime)
+    project = relationship("Projects", back_populates="user_permissions")
+    user = relationship("Users", back_populates="project_permissions")
 
 
 def create_project(name,
@@ -114,14 +120,17 @@ def update_project_time(project_id):
         db.session.commit()
 
 def assign_project_access(project_id, user_id, access_level):
+    current_time = datetime.now(timezone.utc)
     existing_permission = ProjectPermissions.query.filter_by(project_id=project_id, user_id=user_id).first()
     if existing_permission is None:
         new_permission = ProjectPermissions(project_id=project_id,
                                             user_id=user_id,
-                                            access_level=access_level)
+                                            access_level=access_level,
+                                            time_assigned=current_time)
         db.session.add(new_permission)
     elif existing_permission.access_level != access_level:
         existing_permission.access_level = access_level
+        existing_permission.time_assigned = current_time
     db.session.commit()
     update_project_time(project_id)
 
@@ -135,7 +144,18 @@ def index():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dash.html", username=current_user.username, projects_owned=current_user.projects_owned, is_logged_in=True)
+    user_id = current_user.get_id()
+    projects_owned = current_user.projects_owned
+    projects_shared = ProjectPermissions.query.filter(ProjectPermissions.user_id==user_id, CAN_VIEW <= ProjectPermissions.access_level, ProjectPermissions.access_level< OWNER).all()
+    projects_shared = [project_permission.project for project_permission in projects_shared]
+    other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).all()
+    print(projects_owned,projects_shared,other_projects,flush=True)
+    return render_template("dash.html",
+                           username=current_user.username,
+                           projects_owned=projects_owned,
+                           projects_shared = projects_shared,
+                           other_projects = other_projects,
+                           is_logged_in=True)
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -214,11 +234,14 @@ def handle_project_id(project_id, threshold_access=CAN_VIEW):
 def project(project_id_string):
     project_id = int(project_id_string)
     project, access_level, is_logged_in=handle_project_id(project_id)
-    access_level_string = access_message[access_level]
+    access_level_string = access_messages[access_level]
     #project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
     #filesystem_dir = os.path.join(project_dir,"file_system")
     view_route = f"/project/{project_id}/view/"
     permission_route = f"/project/{project_id}/permission"
+    permission_pairs = project.user_permission_pairs()
+    permission_pair_names = [(user.username, permission_descriptions[permission]) for user, permission in permission_pairs]
+    print(permission_pair_names, flush=True)
     return render_template("project.html",
                            project=project,
                            is_logged_in=is_logged_in,
@@ -226,7 +249,8 @@ def project(project_id_string):
                            access_level=access_level,
                            access_level_string=access_level_string,
                            view_route=view_route,
-                           permission_route=permission_route)
+                           permission_route=permission_route,
+                           permission_pair_names=permission_pair_names)
 
 
 @app.route("/project/<project_id_string>/view/",methods=["GET"])
@@ -263,16 +287,22 @@ def viewProject(project_id_string, path=""):
         if access_level < CAN_EDIT:
             collaborator = False
             upload_url = None
+            create_url = None
+            delete_url = None
         else:
             collaborator = True
             upload_url = f"/project/{project_id}/upload/{path}"
+            create_url = f"/project/{project_id}/create/{path}"
+            delete_url = f"/project/{project_id}/delete/{path}"
         return render_template("viewFolder.html",
                                parent_directories=parent_directories,
                                folder_name=path.split("/")[-1],
                                folder_urls=folder_urls,
                                file_urls=file_urls,
                                collaborator=collaborator,
-                               upload_url=upload_url)
+                               upload_url=upload_url,
+                               create_url=create_url,
+                               delete_url=delete_url)
     else:
         if request.args.get("download", None) is not None:
             return send_file(inner_path, as_attachment=True)
@@ -303,7 +333,49 @@ def uploadToProject(project_id_string, path=""):
         print(type(file), flush=True)
         file.save(os.path.join(inner_path,filename))
         update_project_time(project_id)
-    return redirect(f"/project/{project_id}/view/")
+    return redirect(f"/project/{project_id}/view/{path}")
+
+@app.route("/project/<project_id_string>/create/", methods=["GET", "POST"])
+@app.route("/project/<project_id_string>/create/<path:path>", methods=["GET", "POST"])
+def createProjectDir(project_id_string, path=""):
+    print("Directory is",path+".",flush=True)
+    project_id=int(project_id_string)
+    #base_url = f"/project/{project_id}/view/{path}"
+    project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
+    if request.method == "POST":
+        project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
+        filesystem_dir = os.path.join(project_dir,"filesystem")   
+        outer_path = os.path.realpath(os.path.join(filesystem_dir, path))
+        new_dir = os.path.realpath("/"+request.form.get("dir", "/")).strip("/")
+        if new_dir == "":
+            return redirect(f"/project/{project_id}/view/{path}")
+        absolute_path = os.path.realpath(os.path.join(outer_path, new_dir))
+        print("paths:",outer_path,new_dir, absolute_path, flush=True)
+        if not absolute_path.startswith(filesystem_dir):
+            abort(403)
+        os.makedirs(absolute_path, exist_ok=True)
+        return redirect(f"/project/{project_id}/view/{path}/{new_dir}")
+    return redirect(f"/project/{project_id}/view/{path}")    
+@app.route("/project/<project_id_string>/delete/", methods=["GET", "POST"])
+@app.route("/project/<project_id_string>/delete/<path:path>", methods=["GET", "POST"])
+def deleteProjectObject(project_id_string, path=""):
+    print("Directory is",path+".",flush=True)
+    project_id=int(project_id_string)
+    #base_url = f"/project/{project_id}/view/{path}"
+    project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
+    if request.method == "POST":
+        project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
+        filesystem_dir = os.path.join(project_dir,"filesystem")   
+        outer_path = os.path.realpath(os.path.join(filesystem_dir, path))
+        delete_path = os.path.realpath("/"+request.form.get("name", "/")).strip("/")
+        if delete_path == "":
+            return redirect(f"/project/{project_id}/view/{path}")
+        absolute_path = os.path.realpath(os.path.join(outer_path, delete_path))
+        print("paths:",outer_path, delete_path, absolute_path, flush=True)
+        if (not absolute_path.startswith(filesystem_dir)) or absolute_path == filesystem_dir:
+            abort(403)
+        shutil.rmtree(absolute_path)
+    return redirect(f"/project/{project_id}/view/{path}")
 
 @login_required
 @app.route("/project/<project_id_string>/permission", methods=["GET", "POST"])

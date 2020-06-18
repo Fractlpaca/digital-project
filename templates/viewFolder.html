@@ -1,22 +1,29 @@
 {% extends "viewer.html" %}
 
 {% block content %}
-    {% if folder_urls|length !=0 %}
-        <h3>Folders</h3>
-        {% for name, url in folder_urls %}
-            <a href='{{url}}'>{{name}}</a><br>
-        {% endfor %}
+    <h3>Folders</h3>
+    {% for name, url in folder_urls %}
+        <a href='{{url}}'>{{name}}</a>
+        <form method="POST" action={{delete_url}}>
+            <input type="hidden" value="{{name}}" name="name" required>
+            <input type="submit" value="Delete">
+        </form>
+        <br>
+    {% endfor %}
+    {% if collaborator %}
+        <form method='POST' action='{{create_url}}'>
+            <input type='text' name='dir' required>
+            <input type='submit' value="New Directory">
+        </form>
     {% endif %}
-    {% if file_urls|length !=0 %}
-        <h3>Files</h3>
-        {% for name, url in file_urls %}
-            <a href='{{url}}'>{{name}}</a><br>
-        {% endfor %}
-    {% endif %}
+    <h3>Files</h3>
+    {% for name, url in file_urls %}
+        <a href='{{url}}'>{{name}}</a><br>
+    {% endfor %}
     {% if collaborator %}
         <form method='POST' enctype=multipart/form-data action='{{upload_url}}'>
-            <input type='file' name='file'>
-            <input type='submit'>
+            <input type='file' name='file' required>
+            <input type='submit' value="Upload">
         </form>
     {% endif %}
 {% endblock %}

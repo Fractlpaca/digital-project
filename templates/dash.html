@@ -7,4 +7,12 @@
     {% for project in projects_owned %}
         <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
     {% endfor %}
+    <h3>Projects Shared With You</h3>
+    {% for project in projects_shared %}
+        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
+    {% endfor %}
+    <h3>Public Projects</h3>
+    {% for project in other_projects %}
+        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
+    {% endfor %}
 {% endblock %}

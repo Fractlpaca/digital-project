@@ -14,17 +14,28 @@ CAN_EDIT = 5
 SUB_OWNER = 6 #Meta-editing priveleges eg. Renaming, deleting
 OWNER = 7 #Original creator of object
 
-access_message = {
-    0: "Invisible. Cease and desist.",
-    1: "You do not have permission to view this content.",
-    2: "View only.",
-    3: "Commenting enabled.",
-    4: "You may submit to this assignment.",
-    5: "You may edit this content.",
-    6: "You are an owner.",
-    7: "You are the primary owner."
+access_messages = {
+    NO_ACCESS: "Invisible. Cease and desist.",
+    CAN_SEE: "You do not have permission to view this content.",
+    CAN_VIEW: "View only.",
+    CAN_COMMENT: "Commenting enabled.",
+    CAN_SUBMIT: "You may submit to this assignment.",
+    CAN_EDIT: "You may edit this content.",
+    SUB_OWNER: "You are an owner.",
+    OWNER: "You are the primary owner."
 }
-    
+
+permission_descriptions = {
+    NO_ACCESS: "Totally Banned",
+    CAN_SEE: "Cannot View",
+    CAN_VIEW: "View Only",
+    CAN_COMMENT: "View and Comment",
+    CAN_SUBMIT: "Can Submit",
+    CAN_EDIT: "Collaborator",
+    SUB_OWNER: "Owner",
+    OWNER: "Primary Owner"
+}
+
 #Project access levels
 PROJECT_DEFAULT_ACCESS = CAN_SEE
 PROJECT_STUDENT_ACCESS = CAN_SEE
