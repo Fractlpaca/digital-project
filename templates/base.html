@@ -2,7 +2,7 @@
 
 <head>
 	<meta charset='UTF-8'>
-	<title>{% block title %}{% endblock %}</title>
+	<title>{% block title %}Title{% endblock %}</title>
 	<link rel="stylesheet" href="/static/css/style.css">
 </head>
 
@@ -27,8 +27,12 @@
         </div>
 	</nav>
 	{% endblock %}
+	
+	<main>
 	{% block content %}
 	{% endblock %}
+	</main>
+	
 	{% block footer %}
 	{% endblock %}
 </body>

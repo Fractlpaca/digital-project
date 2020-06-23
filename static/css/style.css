@@ -10,3 +10,18 @@ body{
 nav{
     background-color: green;
 }
+
+.divtable{
+    width: 100%;
+}
+
+.filesystem{
+    display: inline-block;
+    float: left;
+    width: 100%;
+}
+
+.userlist{
+    display: inline-block;
+    float: right;
+}

@@ -207,13 +207,13 @@ def logout():
 @app.route("/newProject", methods=["GET", "POST"])
 @login_required
 def newProject():
-    if request.args:
-        name = request.args.get("name","Untitled Project")
+    if request.method == "POST":
+        name = request.form.get("name","Untitled Project")
         owner_id = current_user.user_id
         new_project = create_project(name=name,
                                      owner_id=owner_id)
         return redirect("/project/{}".format(new_project.project_id))
-    return redirect("/dashboard")
+    return render_template("newProject.html")
 
 
 def handle_project_id(project_id, threshold_access=CAN_VIEW):

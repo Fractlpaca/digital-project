@@ -5,14 +5,15 @@
 {% block content %}
     <h3>Your Projects:</h3>
     {% for project in projects_owned %}
-        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
+        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a><br>
     {% endfor %}
+    <a href="{{ url_for('newProject') }}"><button>New Project</button></a>
     <h3>Projects Shared With You</h3>
     {% for project in projects_shared %}
-        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
+        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a><br>
     {% endfor %}
     <h3>Public Projects</h3>
     {% for project in other_projects %}
-        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a>
+        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a><br>
     {% endfor %}
 {% endblock %}

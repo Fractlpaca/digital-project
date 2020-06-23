@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+
+{% block title %}New Project{% endblock %}
+
+{% block content %}
+    <form action="newProject" method="POST">
+        <input type="text" name="name" required>
+        <input type="submit" value="Create Project">
+    </form>
+{% endblock %}
