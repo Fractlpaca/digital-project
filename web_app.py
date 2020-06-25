@@ -2,7 +2,7 @@
 Web app to provide feedback from and to students and teachers
 Author: Joseph Grace
 Version: 1.3
-Updated 08/06/2020
+Updated 25/06/2020
 """
 
 import os
@@ -63,7 +63,25 @@ class Projects(db.Model):
     time_created = Column(DateTime)
     time_updated = Column(DateTime)
     user_permissions = relationship("ProjectPermissions", back_populates="project")
+    
+    def assign_project_access(self, user_id, access_level):
+        """Assigns or modifies access level of user given by user_id"""
+        current_time = datetime.now(timezone.utc)
+        existing_permission = ProjectPermissions.query.filter_by(project_id=self.project_id, user_id=user_id).first()
+        if existing_permission is None:
+            new_permission = ProjectPermissions(project_id=self.project_id,
+                                                user_id=user_id,
+                                                access_level=access_level,
+                                                time_assigned=current_time)
+            db.session.add(new_permission)
+        elif existing_permission.access_level != access_level:
+            existing_permission.access_level = access_level
+            existing_permission.time_assigned = current_time
+        self.update_time()  
+        db.session.commit()  
+    
     def access_level(self, user_id=None):
+        """Returns access level of user given by user_id, or default access level if user_id is None"""
         if user_id is None:
             return self.default_access
         project_permission = ProjectPermissions.query.filter_by(project_id=self.project_id,
@@ -73,8 +91,16 @@ class Projects(db.Model):
         return project_permission.access_level
     
     def user_permission_pairs(self):
-        return sorted([(permission.user,permission.access_level) for permission in self.user_permissions],key=lambda x: (-x[1],x[0]))
-
+        """Returns list of tuples (user object, permission_level) sorted by permission level decreasing,
+        then by username lexographically."""
+        return sorted([(permission.user,permission.access_level) for permission in self.user_permissions],key=lambda x: (-x[1],x[0].username))
+    
+    def update_time(self):
+        """Updates last edit time of project."""
+        current_time = datetime.now(timezone.utc)
+        self.time_updated = current_time
+        db.session.commit()
+    
 class ProjectPermissions(db.Model):
     __tablename__ = "project_permissions"
     project_id = Column(Integer, ForeignKey("projects.project_id"), primary_key=True)
@@ -91,6 +117,7 @@ def create_project(name,
                    student_access=PROJECT_STUDENT_ACCESS,
                    class_access=PROJECT_CLASS_ACCESS,
                    teacher_access=PROJECT_TEACHER_ACCESS):
+    """Creates and returns a Project Object with the given parameters"""
     current_time = datetime.now(timezone.utc)
     new_project = Projects(name=name,
                            owner_id=owner_id,
@@ -112,27 +139,23 @@ def create_project(name,
     return new_project
 
 
-def update_project_time(project_id):
-    current_time = datetime.now(timezone.utc)
-    project = Projects.query.filter_by(project_id=project_id).first()
-    if not project is None:
-        project.time_updated = current_time
-        db.session.commit()
 
-def assign_project_access(project_id, user_id, access_level):
-    current_time = datetime.now(timezone.utc)
-    existing_permission = ProjectPermissions.query.filter_by(project_id=project_id, user_id=user_id).first()
-    if existing_permission is None:
-        new_permission = ProjectPermissions(project_id=project_id,
-                                            user_id=user_id,
-                                            access_level=access_level,
-                                            time_assigned=current_time)
-        db.session.add(new_permission)
-    elif existing_permission.access_level != access_level:
-        existing_permission.access_level = access_level
-        existing_permission.time_assigned = current_time
-    db.session.commit()
-    update_project_time(project_id)
+def handle_project_id(project_id, threshold_access=CAN_VIEW):
+    """Takes project id, and a threshold access the user must meet,
+    and returns a 3-tuple (project object, access_level of user, whether user is logged in)"""
+    project = Projects.query.filter_by(project_id=project_id).first()
+    if project is None:
+        abort(404)
+    is_logged_in = current_user.is_authenticated
+    if is_logged_in:
+        access_level = project.access_level(current_user.user_id)
+    else:
+        access_level = project.default_access
+    if access_level < threshold_access:
+        abort(404)
+        #To prevent knoledge of existence of project
+    return (project, access_level, is_logged_in)
+
 
 @app.route("/")
 def index():
@@ -215,20 +238,6 @@ def newProject():
         return redirect("/project/{}".format(new_project.project_id))
     return render_template("newProject.html")
 
-
-def handle_project_id(project_id, threshold_access=CAN_VIEW):
-    project = Projects.query.filter_by(project_id=project_id).first()
-    if project is None:
-        abort(404)
-    is_logged_in = current_user.is_authenticated
-    if is_logged_in:
-        access_level = project.access_level(current_user.user_id)
-    else:
-        access_level = project.default_access
-    if access_level < threshold_access:
-        abort(404)
-        #To prevent knoledge of existence of project
-    return (project, access_level, is_logged_in)
 
 @app.route("/project/<project_id_string>", methods=["GET", "POST"])
 def project(project_id_string):
@@ -333,7 +342,7 @@ def uploadToProject(project_id_string, path=""):
         filename = secure_filename(file.filename)
         print(type(file), flush=True)
         file.save(os.path.join(inner_path,filename))
-        update_project_time(project_id)
+        project.update_time()
     return redirect(f"/project/{project_id}/view/{path}")
 
 
@@ -356,6 +365,7 @@ def createProjectDir(project_id_string, path=""):
         if not absolute_path.startswith(filesystem_dir):
             abort(403)
         os.makedirs(absolute_path, exist_ok=True)
+        project.update_time()
         return redirect(f"/project/{project_id}/view/{path}/{new_dir}")
     return redirect(f"/project/{project_id}/view/{path}")  
 
@@ -383,6 +393,7 @@ def deleteProjectObject(project_id_string, path=""):
                 shutil.rmtree(absolute_path)
             else:
                 os.remove(absolute_path)
+            project.update_time()
     return redirect(f"/project/{project_id}/view/{path}")
 
 @login_required
