@@ -2,14 +2,14 @@
 Web app to provide feedback from and to students and teachers
 Author: Joseph Grace
 Version: 1.3
-Updated 25/06/2020
+Updated 30/06/2020
 """
 
 import os
 import shutil
 from flask import Flask, request, url_for, redirect, render_template, flash, session, abort, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, or_
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, or_
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
 from passlib.hash import bcrypt
@@ -62,6 +62,10 @@ class Projects(db.Model):
     student_access = Column(Integer, default=PROJECT_STUDENT_ACCESS)
     time_created = Column(DateTime)
     time_updated = Column(DateTime)
+    tags = Column(Text(), default="")
+    authors = Column(Text(), default="")
+    content_type = Column(Text(), default="none", nullable=False)
+    
     user_permissions = relationship("ProjectPermissions", back_populates="project")
     
     def assign_project_access(self, user_id, access_level):
@@ -78,7 +82,35 @@ class Projects(db.Model):
             existing_permission.access_level = access_level
             existing_permission.time_assigned = current_time
         self.update_time()  
-        db.session.commit()  
+        db.session.commit()
+    
+    def add_tags(self, tags):
+        tag_list = [tag.strip() for tag in tags.split(",")]
+        self.tags=f"{self.tags},{','.join(tag_list)}"
+        db.session.commit()
+        self.update_time()
+    
+    def remove_tags(self, tags):
+        tag_set = set(tag.strip() for tag in tags.split(","))
+        current_tag_set = set(tag.strip() for tag in self.tags.split(","))
+        tag_list = list(current_tag_set-tag_set)
+        self.tags=','.join(tag_list)
+        db.session.commit()
+        self.update_time()
+    
+    def add_authors(self, authors):
+        author_list = [author.strip() for author in authors.split(",")]
+        self.authors=f"{self.authors},{','.join(author_list)}"
+        db.session.commit()
+        self.update_time()
+    
+    def remove_authors(self, authors):
+        author_set = set(author.strip() for author in authors.split(","))
+        current_author_set = set(author.strip() for author in self.authors.split(","))
+        author_list = list(current_author_set-author_set)
+        self.authors=','.join(author_list)
+        db.session.commit()
+        self.update_time()    
     
     def access_level(self, user_id=None):
         """Returns access level of user given by user_id, or default access level if user_id is None"""
@@ -113,6 +145,7 @@ class ProjectPermissions(db.Model):
 
 def create_project(name,
                    owner_id,
+                   content_type="none",
                    default_access=PROJECT_DEFAULT_ACCESS,
                    student_access=PROJECT_STUDENT_ACCESS,
                    class_access=PROJECT_CLASS_ACCESS,
@@ -121,6 +154,7 @@ def create_project(name,
     current_time = datetime.now(timezone.utc)
     new_project = Projects(name=name,
                            owner_id=owner_id,
+                           content_type=content_type,
                            time_created=current_time,
                            default_access=default_access,
                            student_access=student_access)
@@ -246,7 +280,7 @@ def project(project_id_string):
     access_level_string = access_messages[access_level]
     #project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
     #filesystem_dir = os.path.join(project_dir,"file_system")
-    view_route = f"/project/{project_id}/view/"
+    view_route = f"/project/{project_id}/filesystem/"
     permission_route = f"/project/{project_id}/permission"
     permission_pairs = project.user_permission_pairs()
     permission_pair_names = [(user.username, permission_descriptions[permission]) for user, permission in permission_pairs]
@@ -262,12 +296,12 @@ def project(project_id_string):
                            permission_pair_names=permission_pair_names)
 
 
-@app.route("/project/<project_id_string>/view/",methods=["GET"])
-@app.route("/project/<project_id_string>/view/<path:path>",methods=["GET"])
-def viewProject(project_id_string, path=""):
+@app.route("/project/<project_id_string>/filesystem/",methods=["GET"])
+@app.route("/project/<project_id_string>/filesystem/<path:path>",methods=["GET"])
+def viewProjectFilesystem(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
     project_id=int(project_id_string)
-    base_url = f"/project/{project_id}/view/{path}"
+    base_url = f"/project/{project_id}/filesystem/{path}"
     project, access_level, is_logged_in=handle_project_id(project_id)
     project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
     filesystem_dir = os.path.join(project_dir,"filesystem")   
@@ -277,11 +311,11 @@ def viewProject(project_id_string, path=""):
         abort(403)
     if not os.path.exists(inner_path):
         abort(404)
-    parent_directories = [("root", f"/project/{project_id}/view")]
+    parent_directories = [("root", f"/project/{project_id}/filesystem")]
     folders = path.strip("/").split("/")
     if folders == [""]: folders = []
     for i in range(len(folders)):
-        parent_directories.append((folders[i], f"/project/{project_id}/view/"+"/".join(folders[:i+1])))
+        parent_directories.append((folders[i], f"/project/{project_id}/filesystem/"+"/".join(folders[:i+1])))
     print(parent_directories, flush=True)
     if os.path.isdir(inner_path):
         files = os.listdir(inner_path)
@@ -324,10 +358,10 @@ def viewProject(project_id_string, path=""):
 
 @app.route("/project/<project_id_string>/upload/", methods=["GET", "POST"])
 @app.route("/project/<project_id_string>/upload/<path:path>", methods=["GET", "POST"])
-def uploadToProject(project_id_string, path=""):
+def uploadToProjectFilesystem(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
     project_id=int(project_id_string)
-    base_url = f"/project/{project_id}/view/{path}"
+    base_url = f"/project/{project_id}/filesystem/{path}"
     project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
     project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
     filesystem_dir = os.path.join(project_dir,"filesystem")   
@@ -343,15 +377,15 @@ def uploadToProject(project_id_string, path=""):
         print(type(file), flush=True)
         file.save(os.path.join(inner_path,filename))
         project.update_time()
-    return redirect(f"/project/{project_id}/view/{path}")
+    return redirect(base_url)
 
 
 @app.route("/project/<project_id_string>/create/", methods=["GET", "POST"])
 @app.route("/project/<project_id_string>/create/<path:path>", methods=["GET", "POST"])
-def createProjectDir(project_id_string, path=""):
+def createProjectFilesystemDir(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
     project_id=int(project_id_string)
-    #base_url = f"/project/{project_id}/view/{path}"
+    base_url = f"/project/{project_id}/filesystem/{path}"
     project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
     if request.method == "POST":
         project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
@@ -359,23 +393,23 @@ def createProjectDir(project_id_string, path=""):
         outer_path = os.path.realpath(os.path.join(filesystem_dir, path))
         new_dir = os.path.realpath("/"+request.form.get("dir", "/")).strip("/")
         if new_dir == "":
-            return redirect(f"/project/{project_id}/view/{path}")
+            return redirect(f"/project/{project_id}/filesystem/{path}")
         absolute_path = os.path.realpath(os.path.join(outer_path, new_dir))
         print("paths:",outer_path,new_dir, absolute_path, flush=True)
         if not absolute_path.startswith(filesystem_dir):
             abort(403)
         os.makedirs(absolute_path, exist_ok=True)
         project.update_time()
-        return redirect(f"/project/{project_id}/view/{path}/{new_dir}")
-    return redirect(f"/project/{project_id}/view/{path}")  
+        return redirect(f"{base_url}/{new_dir}")
+    return redirect(base_url)  
 
 
 @app.route("/project/<project_id_string>/delete/", methods=["GET", "POST"])
 @app.route("/project/<project_id_string>/delete/<path:path>", methods=["GET", "POST"])
-def deleteProjectObject(project_id_string, path=""):
+def deleteProjectFilesystemObject(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
     project_id=int(project_id_string)
-    #base_url = f"/project/{project_id}/view/{path}"
+    base_url = f"/project/{project_id}/filesystem/{path}"
     project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
     if request.method == "POST":
         project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
@@ -383,7 +417,7 @@ def deleteProjectObject(project_id_string, path=""):
         outer_path = os.path.realpath(os.path.join(filesystem_dir, path))
         delete_path = os.path.realpath("/"+request.form.get("name", "/")).strip("/")
         if delete_path == "":
-            return redirect(f"/project/{project_id}/view/{path}")
+            return redirect(base_url)
         absolute_path = os.path.realpath(os.path.join(outer_path, delete_path))
         print("paths:",outer_path, delete_path, absolute_path, flush=True)
         if (not absolute_path.startswith(filesystem_dir)) or absolute_path == filesystem_dir:
@@ -394,7 +428,7 @@ def deleteProjectObject(project_id_string, path=""):
             else:
                 os.remove(absolute_path)
             project.update_time()
-    return redirect(f"/project/{project_id}/view/{path}")
+    return redirect(base_url)
 
 @login_required
 @app.route("/project/<project_id_string>/permission", methods=["GET", "POST"])
@@ -413,7 +447,7 @@ def projectPermission(project_id_string):
                 print(added_user.username, new_access,flush=True)
                 if new_access < NO_ACCESS or new_access > SUB_OWNER:
                     return redirect(f"/project/{project_id}")
-                assign_project_access(project_id, added_user.user_id, new_access)
+                project.assign_project_access(added_user.user_id, new_access)
     return redirect(f"/project/{project_id}")
 
 
