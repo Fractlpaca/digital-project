@@ -4,17 +4,16 @@
 	<meta charset='UTF-8'>
 	<title>{% block title %}Title{% endblock %}</title>
 	<link rel="stylesheet" href="/static/css/style.css">
+	<link rel="icon" href="/static/images/icon.png">
 </head>
 
 <body>
-	{% block navbar %}
-	<nav>
-        <div class='navigation'>
-            <p>
-            <a href='{{url_for("index")}}'>Home</a>
-            {% if is_logged_in %}
-            | <a href='{{url_for("dashboard")}}'>Your Dash</a>
-            {% endif %}
+    <header>
+    {% block titlebar %}
+    <div class="titlebar">
+        <div>
+        <a href='{{url_for("index")}}'><img src="/static/images/home.png"></img></a>
+        <h1>BHS Showcase</h1>
         </div>
         <div class='loginout'>
             {% if is_logged_in %}
@@ -25,8 +24,20 @@
             <p><a href='{{url_for("login")}}'>Login</a> or <a href='{{url_for("register")}}'>Register</a></p>
             {% endif %}
         </div>
-	</nav>
-	{% endblock %}
+    </div>
+    {% block navbar %}
+    <div class='nav'>
+        <nav>
+            <a href='{{url_for("index")}}'>Home</a>
+            {% if is_logged_in %}
+            | <a href='{{url_for("dashboard")}}'>Your Dash</a>
+            {% endif %}
+            
+        </nav>
+    </div>
+    {% endblock %}
+    </header>
+    {% endblock %}
 	
 	<main>
 	{% block content %}
@@ -34,5 +45,8 @@
 	</main>
 	
 	{% block footer %}
+	<footer>
+        <p>Just some placeholder text.</p>
+	</footer>
 	{% endblock %}
 </body>

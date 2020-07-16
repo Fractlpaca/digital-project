@@ -5,12 +5,106 @@ iframe{
 
 body{
     background-color: salmon;
+    padding: 0px;
+    margin: 0px;
 }
 
-nav{
+header{
+    background-color: purple;
+    position: sticky;
+    top: 0px;
+    z-index: 10;
+}
+
+.titlebar{
+    height: 70px;
+    background-color: grey;
+    padding: 2px;
+}
+
+.titlebar img{
+    height: 100%;
+}
+
+.titlebar h1{
+    display: inline;
+    margin: auto;
+}
+
+.titlebar div{
+    display: inline-block;
+}
+
+header .nav{
+    display: none;
+}
+
+header:hover .nav{
+    display: block;
+}
+
+.loginout{
+    float: right;
+}
+
+.nav{
     background-color: green;
 }
 
+.projecttitle{
+    width:100%;
+    background-color: violet;
+}
+
+.container{
+    position: relative;
+}
+
+.left{
+    width:67%;
+    height: 100%;
+    margin:0px;
+    left: 0px;
+    background-color: red;
+    padding: 2px;
+}
+
+.right{
+    width:32%;
+    height: 100%;
+    position: absolute;
+    display: inline-block;
+    right: 0px;
+    top: 0px;
+    margin: 0px;
+    background-color: blue;
+    padding: 2px;
+}
+
+div.content{
+    background-color: cornflowerblue;
+    padding: 5px;
+}
+
+img.content{
+    width: 100%;
+}
+
+.description{
+    background-color: pink;
+    float: left;
+    padding: 5px;
+}
+
+.comments{
+    padding: 5px;
+    background-color: teal;
+}
+
+footer{
+    background-color: lightGreen;
+}
+/*
 .divtable{
     width: 100%;
 }
@@ -24,4 +118,4 @@ nav{
 .userlist{
     display: inline-block;
     float: right;
-}
+}*/

@@ -3,36 +3,32 @@
 {% block title %}{{project.name}}{% endblock %}
 
 {% block content %}
-    <header>
-    Project Name: {{project.name}}<br>
-    Access Level: {{access_level_string}}<br>
-    </header>
-    <table class="divtable">
-        <tr>
-            <td><div class="filesystem">
-            <iframe title="File Viewer" src="{{view_route}}"></iframe>
-            </div></td>
-            
-            <td><div class="userlist">
-            <h3>Users:</h3>
-            {% for pair in permission_pair_names %}
-                <p>{{pair[0]}}: {{pair[1]}}</p>
-            {% endfor %}
-            {% if access_level >= 6 %}
-                <form action="{{permission_route}}" method="POST">
-                    <input type="text" name="username" placeholder="Username" required><br>
-                    <label>Priveleges: <select name="access_level" required>
-                        <option value=0>Totally Banned</option>
-                        <option value=1>Banned</option>
-                        <option value=2>Can View</option>
-                        <option value=3>Can Comment</option>
-                        <option value=5>Can Edit</option>
-                        <option value=6>Sub-owner</option>
-                    </select></label><br>
-                    <input type="submit" value="Add User">
-                </form>
-            {% endif %}
-            </div></td>
-        </tr>
-    </table>
+    <div class="projecttitle">
+    <span id='project_name'>
+    Project Name: {{project.name}}
+    <button onclick="document.getElementById('project_name').style.display='none';document.getElementById('project_name_form').style.display='inline'">Edit</button>
+    </span>
+    <form method="POST" action="{{route}}/changeName" id='project_name_form' style="display: none">
+        Project Name:
+        <input type="text" name="name" value='{{project.name}}'>
+        <input type="submit" value="Submit">
+    </form>
+    </div><div class='container'>
+        <div class='left'>
+            <div class="content">
+                <img class="content" src="/static/2400x4800.png"></img>
+            </div>
+            <div class="comments">
+                <p>Yeah this is really cool. 10/10.</p>
+                <p>This could use some major imporovement, especially in the top left. Frankly I'm a little bit dissaplointed.</p>
+                <p>Awesome!</p>
+                <p>Where are the coordinates?</p>
+            </div>
+        </div><div class='right'>
+            <div class="description">
+                <p>So this is a picture of the mandelbrot set, at coordinates (insert coordinates here). I really like how it looks, what about you?</p>
+            </div>
+        </div>
+    </div>
+    <!--iframe src="/project/{{project.project_id}}/webgl"></iframe-->
 {% endblock %}

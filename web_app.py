@@ -7,7 +7,7 @@ Updated 30/06/2020
 
 import os
 import shutil
-from flask import Flask, request, url_for, redirect, render_template, flash, session, abort, send_from_directory, send_file
+from flask import Flask, request, url_for, redirect, render_template, render_template_string, flash, session, abort, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, or_
 from sqlalchemy.orm import relationship
@@ -84,33 +84,18 @@ class Projects(db.Model):
         self.update_time()  
         db.session.commit()
     
-    def add_tags(self, tags):
-        tag_list = [tag.strip() for tag in tags.split(",")]
-        self.tags=f"{self.tags},{','.join(tag_list)}"
+    def set_tags(self, tags):
+        tag_set = set(tag.strip().lower() for tag in tags.split(","))
+        tag_set.remove("")
+        self.tags=','.join(sorted(tag_set))
         db.session.commit()
         self.update_time()
     
-    def remove_tags(self, tags):
-        tag_set = set(tag.strip() for tag in tags.split(","))
-        current_tag_set = set(tag.strip() for tag in self.tags.split(","))
-        tag_list = list(current_tag_set-tag_set)
-        self.tags=','.join(tag_list)
+    def set_authors(self, authors):
+        author_list = set(author.strip() for author in authors.split(","))
+        self.authors=','.join(sorted(author_list))
         db.session.commit()
-        self.update_time()
-    
-    def add_authors(self, authors):
-        author_list = [author.strip() for author in authors.split(",")]
-        self.authors=f"{self.authors},{','.join(author_list)}"
-        db.session.commit()
-        self.update_time()
-    
-    def remove_authors(self, authors):
-        author_set = set(author.strip() for author in authors.split(","))
-        current_author_set = set(author.strip() for author in self.authors.split(","))
-        author_list = list(current_author_set-author_set)
-        self.authors=','.join(author_list)
-        db.session.commit()
-        self.update_time()    
+        self.update_time()   
     
     def access_level(self, user_id=None):
         """Returns access level of user given by user_id, or default access level if user_id is None"""
@@ -280,8 +265,7 @@ def project(project_id_string):
     access_level_string = access_messages[access_level]
     #project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
     #filesystem_dir = os.path.join(project_dir,"file_system")
-    view_route = f"/project/{project_id}/filesystem/"
-    permission_route = f"/project/{project_id}/permission"
+    route=f"/project/{project_id}"
     permission_pairs = project.user_permission_pairs()
     permission_pair_names = [(user.username, permission_descriptions[permission]) for user, permission in permission_pairs]
     print(permission_pair_names, flush=True)
@@ -291,10 +275,15 @@ def project(project_id_string):
                            username=(current_user.username if is_logged_in else None),
                            access_level=access_level,
                            access_level_string=access_level_string,
-                           view_route=view_route,
-                           permission_route=permission_route,
+                           route=route,
                            permission_pair_names=permission_pair_names)
 
+
+@app.route("/project/<project_id_string>/webgl",methods=["GET"])
+def webGL(project_id_string):
+    project_id=int(project_id_string)
+    project, access_level, is_logged_in=handle_project_id(project_id, CAN_VIEW)
+    return render_template("webgl.html", project_id=project_id)
 
 @app.route("/project/<project_id_string>/filesystem/",methods=["GET"])
 @app.route("/project/<project_id_string>/filesystem/<path:path>",methods=["GET"])
@@ -356,8 +345,8 @@ def viewProjectFilesystem(project_id_string, path=""):
                                download_url=download_url)
 
 
-@app.route("/project/<project_id_string>/upload/", methods=["GET", "POST"])
-@app.route("/project/<project_id_string>/upload/<path:path>", methods=["GET", "POST"])
+@app.route("/project/<project_id_string>/upload/", methods=["POST"])
+@app.route("/project/<project_id_string>/upload/<path:path>", methods=["POST"])
 def uploadToProjectFilesystem(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
     project_id=int(project_id_string)
@@ -380,8 +369,8 @@ def uploadToProjectFilesystem(project_id_string, path=""):
     return redirect(base_url)
 
 
-@app.route("/project/<project_id_string>/create/", methods=["GET", "POST"])
-@app.route("/project/<project_id_string>/create/<path:path>", methods=["GET", "POST"])
+@app.route("/project/<project_id_string>/create/", methods=["POST"])
+@app.route("/project/<project_id_string>/create/<path:path>", methods=["POST"])
 def createProjectFilesystemDir(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
     project_id=int(project_id_string)
@@ -404,8 +393,8 @@ def createProjectFilesystemDir(project_id_string, path=""):
     return redirect(base_url)  
 
 
-@app.route("/project/<project_id_string>/delete/", methods=["GET", "POST"])
-@app.route("/project/<project_id_string>/delete/<path:path>", methods=["GET", "POST"])
+@app.route("/project/<project_id_string>/delete/", methods=["POST"])
+@app.route("/project/<project_id_string>/delete/<path:path>", methods=["POST"])
 def deleteProjectFilesystemObject(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
     project_id=int(project_id_string)
@@ -431,7 +420,7 @@ def deleteProjectFilesystemObject(project_id_string, path=""):
     return redirect(base_url)
 
 @login_required
-@app.route("/project/<project_id_string>/permission", methods=["GET", "POST"])
+@app.route("/project/<project_id_string>/permission", methods=["POST"])
 def projectPermission(project_id_string):
     project_id=int(project_id_string)
     project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
@@ -450,6 +439,42 @@ def projectPermission(project_id_string):
                 project.assign_project_access(added_user.user_id, new_access)
     return redirect(f"/project/{project_id}")
 
+@login_required
+@app.route("/project/<project_id_string>/setAuthors", methods=["POST"])
+def setAuthors(project_id_str):
+    try:
+        project_id = int(project_id_str)
+    except ValueError:
+        abort(404)
+    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+    author_names = request.form.get("names","")
+    project.setAuthors(author_names)
+    return redirect(f"/project/{project_id}")
+
+@login_required
+@app.route("/project/<project_id_string>/setTags", methods=["POST"])
+def setTags(project_id_str):
+    try:
+        project_id = int(project_id_str)
+    except ValueError:
+        abort(404)
+    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+    author_names = request.form.get("tags","")
+    project.setTags(tags)
+    return redirect(f"/project/{project_id}")
+
+@login_required
+@app.route("/project/<project_id_string>/changeName", methods=["POST"])
+def changeName(project_id_string):
+    try:
+        project_id = int(project_id_string)
+    except ValueError:
+        abort(404)
+    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+    new_name = request.form.get("name","Untitled")
+    project.name = new_name
+    db.session.commit()
+    return redirect(f"/project/{project_id}")
 
 def generate_key(filename, size):
     file = open(filename,"wb")
