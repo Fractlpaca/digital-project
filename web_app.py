@@ -261,31 +261,50 @@ def newProject():
 @app.route("/project/<project_id_string>", methods=["GET", "POST"])
 def project(project_id_string):
     project_id = int(project_id_string)
-    project, access_level, is_logged_in=handle_project_id(project_id)
+    project, access_level, is_logged_in=handle_project_id(project_id,CAN_VIEW)
     access_level_string = access_messages[access_level]
-    #project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-    #filesystem_dir = os.path.join(project_dir,"file_system")
     route=f"/project/{project_id}"
     permission_pairs = project.user_permission_pairs()
     permission_pair_names = [(user.username, permission_descriptions[permission]) for user, permission in permission_pairs]
     print(permission_pair_names, flush=True)
-    return render_template("project.html",
-                           project=project,
-                           is_logged_in=is_logged_in,
-                           username=(current_user.username if is_logged_in else None),
-                           access_level=access_level,
-                           access_level_string=access_level_string,
-                           route=route,
-                           permission_pair_names=permission_pair_names)
+    template_args = {"project": project,
+                     "is_logged_in": is_logged_in,
+                     "username": (current_user.username if is_logged_in else None),
+                     "access_level": access_level,
+                     "access_level_string": access_level_string,
+                     "route": route,
+                     "permission_pair_names": permission_pair_names
+    }
+    content_type=project.content_type
+    return render_template("content/game.html",
+                           **template_args)
 
 
 @app.route("/project/<project_id_string>/webgl",methods=["GET"])
 def webGL(project_id_string):
     project_id=int(project_id_string)
     project, access_level, is_logged_in=handle_project_id(project_id, CAN_VIEW)
-    return render_template("webgl.html", project_id=project_id)
+    return send_from_directory(f"{PROJECTS_FOLDER}/{project_id}/content/","index.html")
 
-@app.route("/project/<project_id_string>/filesystem/",methods=["GET"])
+@app.route("/project/<project_id_string>/<folder>/<path:path>",methods=["GET"])
+def gamedata(project_id_string, folder, path):
+    project_id=int(project_id_string)
+    print("Function reached", flush=True)
+    project, access_level, is_logged_in=handle_project_id(project_id, CAN_VIEW)
+    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
+    content_dir = os.path.join(project_dir,"content")
+    if folder not in ["TemplateData", "Build"]: abort(404)
+    inner_path = os.path.realpath(os.path.join(content_dir, folder))
+    inner_path = os.path.realpath(os.path.join(inner_path, path))
+    print(inner_path, flush=True)
+    if not inner_path.startswith(content_dir):
+        abort(403)
+    if not os.path.exists(inner_path):
+        abort(404)
+    return send_from_directory(content_dir, os.path.join(folder,path))
+
+
+"""@app.route("/project/<project_id_string>/filesystem/",methods=["GET"])
 @app.route("/project/<project_id_string>/filesystem/<path:path>",methods=["GET"])
 def viewProjectFilesystem(project_id_string, path=""):
     print("Directory is",path+".",flush=True)
@@ -417,7 +436,7 @@ def deleteProjectFilesystemObject(project_id_string, path=""):
             else:
                 os.remove(absolute_path)
             project.update_time()
-    return redirect(base_url)
+    return redirect(base_url)"""
 
 @login_required
 @app.route("/project/<project_id_string>/permission", methods=["POST"])

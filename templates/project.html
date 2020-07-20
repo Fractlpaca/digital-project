@@ -2,21 +2,18 @@
 
 {% block title %}{{project.name}}{% endblock %}
 
-{% block content %}
+{% block main %}
     <div class="projecttitle">
-    <span id='project_name'>
+    <span>
     Project Name: {{project.name}}
-    <button onclick="document.getElementById('project_name').style.display='none';document.getElementById('project_name_form').style.display='inline'">Edit</button>
     </span>
-    <form method="POST" action="{{route}}/changeName" id='project_name_form' style="display: none">
-        Project Name:
-        <input type="text" name="name" value='{{project.name}}'>
-        <input type="submit" value="Submit">
-    </form>
+    <span>Authors: 
+    </span>
     </div><div class='container'>
         <div class='left'>
             <div class="content">
-                <img class="content" src="/static/2400x4800.png"></img>
+                {% block content %}
+                {% endblock %}
             </div>
             <div class="comments">
                 <p>Yeah this is really cool. 10/10.</p>
@@ -28,6 +25,7 @@
             <div class="description">
                 <p>So this is a picture of the mandelbrot set, at coordinates (insert coordinates here). I really like how it looks, what about you?</p>
             </div>
+            <div class="info"
         </div>
     </div>
     <!--iframe src="/project/{{project.project_id}}/webgl"></iframe-->
