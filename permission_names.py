@@ -1,6 +1,7 @@
 """
-Access level constants to be used in access level columns of database.
+Web app to provide feedback from and to students and teachers.
 Author: Joseph Grace
+Access level constants to be used in access level columns of database.
 """
 
 NO_ACCESS = 0 #Invisible
