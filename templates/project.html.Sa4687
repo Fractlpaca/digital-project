@@ -56,18 +56,16 @@
             Limit Users?:
             <input type="checkbox" value="do_limit" name="do_limit"><br>
             User Limit:
-            <input type="number" name="user_limit" min=0 value=20><br>
+            <input type="number" name="user_limit" min=0><br>
             Expirable?:
             <input type="checkbox" name="expirable" value="expirable"><br>
-            Expires In:
-            <input type="number" name="days" value=7 min=0 size=3> Days
-            <input type="number" name="hours" value=0 min=0 max=23 size=3> Hours
-            <input type="number" name="minutes" value=0 min=0 max=59 size=3> Minutes<br>
+            Expiry Time:
+            <input type="datetime-local" name="time_expires"><br>
             <input type="submit" value="Create Link">
         </form>
-        <button onclick = "document.getElementById('sharing').style.display='none';">Cancel</button>
+        <button onclick = "document.getElementById('editForm').style.display='none';">Cancel</button>
     </div>
-    <button onclick="document.getElementById('sharing').style.display='block';">Edit Sharing</button>
+    <button onclick="document.getElementById('editForm').style.display='block';">Edit Page</button>
     {% endif %}
     
     {% if access_level >= 5 %}

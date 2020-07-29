@@ -6,6 +6,8 @@ Contains helper functions.
 
 import os
 
+from secrets import choice
+
 #Own imports:
 from permission_names import *
 from constants import *

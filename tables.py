@@ -59,6 +59,7 @@ class Projects(db.Model):
     content_type = Column(Text(), default="none", nullable=False)
     
     user_permissions = relationship("ProjectPermissions", back_populates="project")
+    share_links = relationship("ShareLinks", back_populates="project")
     
     def assign_project_access(self, user_id, access_level):
         """Assigns or modifies access level of user given by user_id"""
@@ -139,4 +140,17 @@ class ProjectPermissions(db.Model):
     time_assigned = Column(DateTime)
     project = relationship("Projects", back_populates="user_permissions")
     user = relationship("Users", back_populates="project_permissions")
+
+
+class ShareLinks(db.Model):
+    __tablename__ = "share_links"
+    url_string = Column(String(SHARE_URL_SIZE), primary_key=True)
+    project_id = Column(Integer, ForeignKey("projects.project_id"))
+    access_level_granted = Column(Integer, default=CAN_VIEW)
+    time_created = Column(DateTime)
+    time_expires = Column(DateTime, default=None)
+    user_limit = Column(Integer, default=-1)
+    times_used = Column(Integer, default=0)
+    
+    project = relationship("Projects", back_populates="share_links")
 

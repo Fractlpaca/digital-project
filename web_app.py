@@ -8,8 +8,10 @@ import os
 import shutil
 from zipfile import ZipFile, is_zipfile
 
+from secrets import compare_digest, token_urlsafe
 from passlib.hash import bcrypt
 from werkzeug.utils import secure_filename
+from datetime import datetime, timezone, timedelta
 
 #Own imports:
 from permission_names import *
@@ -132,8 +134,8 @@ def webGL(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)    
-    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/","index.html")
-    #return "Temporarily disabled"
+    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/","index.html")
+    return "Temporarily disabled"
 
 @app.route("/project/<project_id_string>/<folder>/<path:path>",methods=["GET"])
 def gamedata(project_id_string, folder, path):
@@ -226,6 +228,85 @@ def projectPermission(project_id_string):
                     return redirect(f"/project/{project_id}")
                 project.assign_project_access(added_user.user_id, new_access)
     return redirect(f"/project/{project_id}")
+
+@login_required
+@app.route("/project/<project_id_string>/invite/<invite_string>")
+def invite(project_id_string, invite_string):
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, NO_ACCESS)
+    if project is None:
+        abort(404)
+    current_time = datetime.now(timezone.utc)
+    share_link = ShareLinks.query.filter_by(url_string=invite_string,project_id=project.project_id).first()
+    if share_link is None:
+        abort(404)
+    if share_link.user_limit != -1 and share_link.times_used >= share_link.user_limit:
+        abort(404)
+    if share_link.time_expires is not None and current_time > share_link.time_expires:
+        abort(404)
+    route = f"/project/{project.project_id}"
+    existing_access = project.access_level(current_user.user_id)
+    if share_link.access_level_granted <= existing_access:
+        return redirect(route)
+    
+    share_link.times_used += 1
+    project.assign_project_access(current_user.user_id, min(SUB_OWNER, share_link.access_level_granted))
+    db.session.commit()
+    return redirect(route)
+
+@login_required
+@app.route("/project/<project_id_string>/createShareLink", methods=["POST"])
+def create_share_link(project_id_string):
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
+    if project is None:
+        abort(404)
+    route = f"/project/{project.project_id}"
+    if request.method == "POST":
+        form = request.form
+        access_string = form.get("access", None)
+        access_level_granted = access_from_string.get(access_string, None)
+        if access_level_granted is None:
+            return redirect(f"/project/{project.project_id}")
+        do_limit = form.get("do_limit", None) == "do_limit"
+        if do_limit:
+            try:
+                user_limit = int(form.get("user_limit", 20))
+            except ValueError:
+                user_limit = 20
+        else:
+            user_limit = -1
+        current_time = datetime.now(timezone.utc)
+        expirable = form.get("expirable", None) == "expirable"
+        if expirable:
+            try:
+                days = max(0, int(form.get("days", 7)))
+                hours = max(0, int(form.get("hours", 0)))
+                minutes = max(0, int(form.get("minutes", 0)))
+                duration = timedelta(days=days, hours=hours, minutes=minutes)
+            except ValueError:
+                duration = timedelta(days=7)
+            
+            time_expires = current_time + duration
+        else:
+            time_expires = None
+        print(access_level)
+        print(do_limit)
+        print(user_limit)
+        print(expirable)
+        print(time_expires, flush=True)
+        url_string = token_urlsafe(SHARE_URL_SIZE)
+        share_link = ShareLinks(url_string=url_string,
+                                project_id=project.project_id,
+                                access_level_granted=access_level_granted,
+                                time_created=current_time,
+                                time_expires=time_expires,
+                                user_limit=user_limit)
+        
+        project.update_time()
+        db.session.add(share_link)
+        db.session.commit()
+    return redirect(route)
+    
+
 
 @login_required
 @app.route("/project/<project_id_string>/setAuthors", methods=["POST"])
