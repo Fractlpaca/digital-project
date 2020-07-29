@@ -4,11 +4,8 @@
 
 {% block main %}
     <div class="projecttitle">
-    <span>
-    Project Name: {{project.name}}
-    </span>
-    <span>Authors: 
-    </span>
+        <h1 id="project_name">{{project.name}}</h1>
+        <span id="authors">Authors: {{authors}}</span>
     </div><div class='container'>
         <div class='left'>
             <div class="content">
@@ -23,10 +20,45 @@
             </div>
         </div><div class='right'>
             <div class="description">
-                <p>So this is a picture of the mandelbrot set, at coordinates (insert coordinates here). I really like how it looks, what about you?</p>
+                <h3>Description:</h3>
+                <p>{{description}}</p>
             </div>
-            <div class="info"
+            <div class="tags">
+                <h3>Tags:</h3>
+                {% for tag in tags_list %}
+                    <p>{{tag}}</p>
+                {% endfor %}
+            </div>
         </div>
     </div>
-    <!--iframe src="/project/{{project.project_id}}/webgl"></iframe-->
+    {% if access_level >= 6 %}
+    <div class="popup" id="editForm">
+        <h3>Metadata</h3>
+        <form method="POST" action="{{route}}/edit">
+            Title: <input type="text" name="title" value="{{project.name}}"><br>
+            Authors: <input type="text" name="authors" value="{{authors}}"><br>
+            Tags: <input tupe="text" name="tags" value="{{tags}}"><br>
+            Description:<br><textarea name="description" cols=50 rows=10>{{description}}</textarea><br>
+            <input type="submit" value="Make Changes">
+        </form>
+        <button onclick = "document.getElementById('editForm').style.display='none';">Cancel</button>
+    </div>
+    <button onclick="document.getElementById('editForm').style.display='block';">Edit Page</button>
+    {% endif %}
+    
+    {% if access_level >= 5 %}
+    <div id="contentForm" class="popup">
+        <h3>Content</h3>
+        <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
+            <select name='type' value='{{project.content_type}}' required>
+                <option value="game">Game</option>
+            </select>
+            <!--input type='file' name='files' webkitdirectory mozdirectory-->
+            <input type='file' name='file' accept="application/zip" required>
+            <input type='submit' value="Upload">
+        </form>
+        <button onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
+    </div>
+    <button onclick="document.getElementById('contentForm').style.display='block';">Upload Content</button>
+    {% endif %}
 {% endblock %}

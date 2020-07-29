@@ -1,8 +1,6 @@
 """
 Access level constants to be used in access level columns of database.
 Author: Joseph Grace
-Last Edited 02/07/2020
-Note only projects are being implemented currently.
 """
 
 NO_ACCESS = 0 #Invisible

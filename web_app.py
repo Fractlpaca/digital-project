@@ -1,31 +1,26 @@
 """
 Web app to provide feedback from and to students and teachers
 Author: Joseph Grace
-Version: 1.3
-Updated 30/06/2020
 """
 
 import os
 import shutil
 from flask import Flask, request, url_for, redirect, render_template, render_template_string, flash, session, abort, send_from_directory, send_file
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, or_
-from sqlalchemy.orm import relationship
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
 from passlib.hash import bcrypt
 from datetime import datetime, timezone
 from werkzeug.utils import secure_filename
+from zipfile import ZipFile, is_zipfile
+
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, or_
+from sqlalchemy.orm import relationship
 
 #Own imports:
 from permission_names import *
+from constants import *
 
-#HASHKEY_FILENAME = "hashkey.dat"
-SECRET_KEY_FILENAME = "secretkey.dat"
-BCRYPT_ROUNDS = 14
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__) ) #This is the directory of the project
-PROJECTS_FOLDER = os.path.join(APP_DIR,"projects")
-ALLOWED_FILE_EXTENSIONS = ["mp3","txt","docx","pdf","gif","jpg","png","zip","tar","tar.gz",]
 database_file = "sqlite:///{}".format(os.path.join(APP_DIR,"database.db")) #Get path to database file
 
 app = Flask(__name__) #define app
@@ -86,7 +81,8 @@ class Projects(db.Model):
     
     def set_tags(self, tags):
         tag_set = set(tag.strip().lower() for tag in tags.split(","))
-        tag_set.remove("")
+        if "" in tag_set:
+            tag_set.remove("")
         self.tags=','.join(sorted(tag_set))
         db.session.commit()
         self.update_time()
@@ -117,6 +113,26 @@ class Projects(db.Model):
         current_time = datetime.now(timezone.utc)
         self.time_updated = current_time
         db.session.commit()
+    
+    def get_description(self):
+        project_dir = os.path.join(PROJECTS_FOLDER,str(self.project_id))
+        description_file = os.path.join(project_dir,"description.txt")
+        if not os.path.exists(description_file):
+            return None
+        else:
+            file = open(description_file, "r")
+            text = file.read()
+            file.close()
+            self.update_time()
+            return text
+    
+    def set_description(self, text):
+        project_dir = os.path.join(PROJECTS_FOLDER,str(self.project_id))
+        description_file = os.path.join(project_dir,"description.txt")
+        file = open(description_file, "w")
+        file.write(text)
+        file.close()
+        self.update_time()       
     
 class ProjectPermissions(db.Model):
     __tablename__ = "project_permissions"
@@ -151,29 +167,32 @@ def create_project(name,
                                                 time_assigned=current_time)
     project_folder = os.path.join(PROJECTS_FOLDER,str(new_project.project_id))
     os.mkdir(project_folder)
-    project_filesystem = os.path.join(project_folder,"filesystem")
-    os.mkdir(project_filesystem)
     db.session.add(owner_permission_level)
     db.session.commit()
     return new_project
 
 
 
-def handle_project_id(project_id, threshold_access=CAN_VIEW):
-    """Takes project id, and a threshold access the user must meet,
+def handle_project_id_string(project_id_string, threshold_access=CAN_VIEW):
+    """Takes project id string, and a threshold access the user must meet,
     and returns a 3-tuple (project object, access_level of user, whether user is logged in)"""
-    project = Projects.query.filter_by(project_id=project_id).first()
-    if project is None:
-        abort(404)
-    is_logged_in = current_user.is_authenticated
-    if is_logged_in:
-        access_level = project.access_level(current_user.user_id)
+    is_logged_in = current_user.is_authenticated    
+    try:
+        project_id=int(project_id_string)    
+    except ValueError:
+        return (None, NO_ACCESS, is_logged_in)
     else:
-        access_level = project.default_access
-    if access_level < threshold_access:
-        abort(404)
-        #To prevent knoledge of existence of project
-    return (project, access_level, is_logged_in)
+        project = Projects.query.filter_by(project_id=project_id).first()
+        if project is None:
+            abort(404)
+        if is_logged_in:
+            access_level = project.access_level(current_user.user_id)
+        else:
+            access_level = project.default_access
+        if access_level < threshold_access:
+            abort(404)
+            #To prevent knoledge of existence of project
+        return (project, access_level, is_logged_in)
 
 
 @app.route("/")
@@ -260,10 +279,11 @@ def newProject():
 
 @app.route("/project/<project_id_string>", methods=["GET", "POST"])
 def project(project_id_string):
-    project_id = int(project_id_string)
-    project, access_level, is_logged_in=handle_project_id(project_id,CAN_VIEW)
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string,CAN_VIEW)
+    if project is None:
+        abort(404)    
     access_level_string = access_messages[access_level]
-    route=f"/project/{project_id}"
+    route=f"/project/{project.project_id}"
     permission_pairs = project.user_permission_pairs()
     permission_pair_names = [(user.username, permission_descriptions[permission]) for user, permission in permission_pairs]
     print(permission_pair_names, flush=True)
@@ -273,7 +293,12 @@ def project(project_id_string):
                      "access_level": access_level,
                      "access_level_string": access_level_string,
                      "route": route,
-                     "permission_pair_names": permission_pair_names
+                     "upload_route": f"{route}/upload",
+                     "permission_pair_names": permission_pair_names,
+                     "authors": project.authors.replace(",",", "),
+                     "tags_list": project.tags.split(","),
+                     "tags": project.tags.replace(",", ", "),
+                     "description": project.get_description()
     }
     content_type=project.content_type
     return render_template("content/game.html",
@@ -282,17 +307,19 @@ def project(project_id_string):
 
 @app.route("/project/<project_id_string>/webgl",methods=["GET"])
 def webGL(project_id_string):
-    project_id=int(project_id_string)
-    project, access_level, is_logged_in=handle_project_id(project_id, CAN_VIEW)
-    return send_from_directory(f"{PROJECTS_FOLDER}/{project_id}/content/","index.html")
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
+    if project is None:
+        abort(404)    
+    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/","index.html")
+    #return "Temporarily disabled"
 
 @app.route("/project/<project_id_string>/<folder>/<path:path>",methods=["GET"])
 def gamedata(project_id_string, folder, path):
-    project_id=int(project_id_string)
-    print("Function reached", flush=True)
-    project, access_level, is_logged_in=handle_project_id(project_id, CAN_VIEW)
-    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-    content_dir = os.path.join(project_dir,"content")
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
+    if project is None:
+        abort(404)
+    project_dir = os.path.join(PROJECTS_FOLDER, str(project.project_id))
+    content_dir = os.path.join(project_dir,"webgl")
     if folder not in ["TemplateData", "Build"]: abort(404)
     inner_path = os.path.realpath(os.path.join(content_dir, folder))
     inner_path = os.path.realpath(os.path.join(inner_path, path))
@@ -303,146 +330,66 @@ def gamedata(project_id_string, folder, path):
         abort(404)
     return send_from_directory(content_dir, os.path.join(folder,path))
 
-
-"""@app.route("/project/<project_id_string>/filesystem/",methods=["GET"])
-@app.route("/project/<project_id_string>/filesystem/<path:path>",methods=["GET"])
-def viewProjectFilesystem(project_id_string, path=""):
-    print("Directory is",path+".",flush=True)
-    project_id=int(project_id_string)
-    base_url = f"/project/{project_id}/filesystem/{path}"
-    project, access_level, is_logged_in=handle_project_id(project_id)
-    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-    filesystem_dir = os.path.join(project_dir,"filesystem")   
-    inner_path = os.path.realpath(os.path.join(filesystem_dir, path))
-    print(inner_path, flush=True)
-    if not inner_path.startswith(filesystem_dir):
-        abort(403)
-    if not os.path.exists(inner_path):
-        abort(404)
-    parent_directories = [("root", f"/project/{project_id}/filesystem")]
-    folders = path.strip("/").split("/")
-    if folders == [""]: folders = []
-    for i in range(len(folders)):
-        parent_directories.append((folders[i], f"/project/{project_id}/filesystem/"+"/".join(folders[:i+1])))
-    print(parent_directories, flush=True)
-    if os.path.isdir(inner_path):
-        files = os.listdir(inner_path)
-        folder_urls = []
-        file_urls = []
-        for file in files:
-            possible_dir = os.path.join(inner_path, secure_filename(file))
-            if os.path.isdir(possible_dir):
-                folder_urls.append((file, f"{base_url}/{file}"))
-            else:
-                file_urls.append((file, f"{base_url}/{file}"))
-        if access_level < CAN_EDIT:
-            collaborator = False
-            upload_url = None
-            create_url = None
-            delete_url = None
-        else:
-            collaborator = True
-            upload_url = f"/project/{project_id}/upload/{path}"
-            create_url = f"/project/{project_id}/create/{path}"
-            delete_url = f"/project/{project_id}/delete/{path}"
-        return render_template("viewFolder.html",
-                               parent_directories=parent_directories,
-                               folder_name=path.split("/")[-1],
-                               folder_urls=folder_urls,
-                               file_urls=file_urls,
-                               collaborator=collaborator,
-                               upload_url=upload_url,
-                               create_url=create_url,
-                               delete_url=delete_url)
-    else:
-        if request.args.get("download", None) is not None:
-            return send_file(inner_path, as_attachment=True)
-        download_url = f"{base_url}?download"
-        return render_template("viewFile.html",
-                               parent_directories=parent_directories,
-                               filename=path.split("/")[-1],
-                               download_url=download_url)
-
-
-@app.route("/project/<project_id_string>/upload/", methods=["POST"])
-@app.route("/project/<project_id_string>/upload/<path:path>", methods=["POST"])
-def uploadToProjectFilesystem(project_id_string, path=""):
-    print("Directory is",path+".",flush=True)
-    project_id=int(project_id_string)
-    base_url = f"/project/{project_id}/filesystem/{path}"
-    project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
-    project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-    filesystem_dir = os.path.join(project_dir,"filesystem")   
-    inner_path = os.path.realpath(os.path.join(filesystem_dir, path))
-    print(inner_path, flush=True)
-    if not inner_path.startswith(filesystem_dir):
-        abort(403)
-    if not os.path.exists(inner_path):
+@app.route("/project/<project_id_string>/edit", methods=["GET","POST"])
+@login_required
+def editProject(project_id_string):
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
+    if project is None:
         abort(404)    
-    if request.method=="POST":
-        file = request.files["file"]
-        filename = secure_filename(file.filename)
-        print(type(file), flush=True)
-        file.save(os.path.join(inner_path,filename))
-        project.update_time()
-    return redirect(base_url)
-
-
-@app.route("/project/<project_id_string>/create/", methods=["POST"])
-@app.route("/project/<project_id_string>/create/<path:path>", methods=["POST"])
-def createProjectFilesystemDir(project_id_string, path=""):
-    print("Directory is",path+".",flush=True)
-    project_id=int(project_id_string)
-    base_url = f"/project/{project_id}/filesystem/{path}"
-    project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
     if request.method == "POST":
-        project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-        filesystem_dir = os.path.join(project_dir,"filesystem")   
-        outer_path = os.path.realpath(os.path.join(filesystem_dir, path))
-        new_dir = os.path.realpath("/"+request.form.get("dir", "/")).strip("/")
-        if new_dir == "":
-            return redirect(f"/project/{project_id}/filesystem/{path}")
-        absolute_path = os.path.realpath(os.path.join(outer_path, new_dir))
-        print("paths:",outer_path,new_dir, absolute_path, flush=True)
-        if not absolute_path.startswith(filesystem_dir):
-            abort(403)
-        os.makedirs(absolute_path, exist_ok=True)
-        project.update_time()
-        return redirect(f"{base_url}/{new_dir}")
-    return redirect(base_url)  
+        form = request.form
+        title = form.get("title", "")
+        if title != "":
+            project.name = title
+        
+        authors = form.get("authors", "")
+        if authors != "":
+            project.set_authors(authors)
+        
+        description = form.get("description", "")
+        if description != "":
+            project.set_description(description)
+        
+        tags = form.get("tags", "")
+        if tags != "":
+            project.set_tags(tags)
+        
+    return redirect(f"/project/{project.project_id}")
 
-
-@app.route("/project/<project_id_string>/delete/", methods=["POST"])
-@app.route("/project/<project_id_string>/delete/<path:path>", methods=["POST"])
-def deleteProjectFilesystemObject(project_id_string, path=""):
-    print("Directory is",path+".",flush=True)
-    project_id=int(project_id_string)
-    base_url = f"/project/{project_id}/filesystem/{path}"
-    project, access_level, is_logged_in=handle_project_id(project_id, CAN_EDIT)
+@app.route("/project/<project_id_string>/upload", methods=["POST"])
+def upload(project_id_string):
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
+    if project is None:
+        abort(404)
+    route = f"/project/{project.project_id}"
+    project_folder = os.path.join(PROJECTS_FOLDER,str(project.project_id))
+    webgl_folder = os.path.join(project_folder,"webgl")
     if request.method == "POST":
-        project_dir = os.path.join(PROJECTS_FOLDER, str(project_id))
-        filesystem_dir = os.path.join(project_dir,"filesystem")   
-        outer_path = os.path.realpath(os.path.join(filesystem_dir, path))
-        delete_path = os.path.realpath("/"+request.form.get("name", "/")).strip("/")
-        if delete_path == "":
-            return redirect(base_url)
-        absolute_path = os.path.realpath(os.path.join(outer_path, delete_path))
-        print("paths:",outer_path, delete_path, absolute_path, flush=True)
-        if (not absolute_path.startswith(filesystem_dir)) or absolute_path == filesystem_dir:
-            abort(403)
-        if os.path.exists(absolute_path):
-            if os.path.isdir(absolute_path):
-                shutil.rmtree(absolute_path)
-            else:
-                os.remove(absolute_path)
-            project.update_time()
-    return redirect(base_url)"""
-
+        content_type = request.form.get("type", None)
+        file = request.files.get("file",None)
+        if content_type is None or file is None:
+            return redirect(f"/project/{project.project_id}")
+        if content_type == "game":
+            if file.mimetype != "application/zip":
+                return redirect(route)
+            shutil.rmtree(webgl_folder, ignore_errors=True)
+            os.mkdir(webgl_folder)
+            file_path = os.path.join(webgl_folder, "webgl_game.zip")
+            file.save(file_path)
+            #Unzip file:
+            if is_zipfile(os.path.join(webgl_folder, "webgl_game.zip")):
+                zipped_file = ZipFile(file_path, "r")
+                zipped_file.extractall(path=webgl_folder)
+            
+    return redirect(route)
+    
+    
 @login_required
 @app.route("/project/<project_id_string>/permission", methods=["POST"])
 def projectPermission(project_id_string):
-    project_id=int(project_id_string)
-    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
+    if project is None:
+        abort(404)    
     if request.form:
         added_username = request.form.get("username", None)
         if added_username is not None:
@@ -461,23 +408,19 @@ def projectPermission(project_id_string):
 @login_required
 @app.route("/project/<project_id_string>/setAuthors", methods=["POST"])
 def setAuthors(project_id_str):
-    try:
-        project_id = int(project_id_str)
-    except ValueError:
-        abort(404)
-    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
+    if project is None:
+        abort(404)    
     author_names = request.form.get("names","")
     project.setAuthors(author_names)
     return redirect(f"/project/{project_id}")
 
 @login_required
 @app.route("/project/<project_id_string>/setTags", methods=["POST"])
-def setTags(project_id_str):
-    try:
-        project_id = int(project_id_str)
-    except ValueError:
-        abort(404)
-    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+def setTags(project_id_string):
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
+    if project is None:
+        abort(404)    
     author_names = request.form.get("tags","")
     project.setTags(tags)
     return redirect(f"/project/{project_id}")
@@ -485,11 +428,9 @@ def setTags(project_id_str):
 @login_required
 @app.route("/project/<project_id_string>/changeName", methods=["POST"])
 def changeName(project_id_string):
-    try:
-        project_id = int(project_id_string)
-    except ValueError:
-        abort(404)
-    project, access_level, is_logged_in=handle_project_id(project_id, SUB_OWNER)
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
+    if project is None:
+        abort(404)    
     new_name = request.form.get("name","Untitled")
     project.name = new_name
     db.session.commit()
