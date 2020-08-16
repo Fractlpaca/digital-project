@@ -35,7 +35,8 @@ class Users(UserMixin, db.Model):
         return str(self.user_id)
     projects_owned = relationship("Projects", back_populates="owner")
     project_permissions = relationship("ProjectPermissions", back_populates="user")
-
+    comments = relationship("Comments", back_populates="user")
+    
 login_manager = LoginManager()
 login_manager.init_app(app)
 
@@ -60,6 +61,11 @@ class Projects(db.Model):
     
     user_permissions = relationship("ProjectPermissions", back_populates="project")
     share_links = relationship("ShareLinks", back_populates="project")
+    comments = relationship("Comments", back_populates="project")
+    
+    def route(self): return f"/project/{self.project_id}"
+    def folder(self): return f"projects/{self.project_id}"
+    def thumbnail_route(self): return f"/project/{self.project_id}/thumbnail"
     
     def assign_project_access(self, user_id, access_level):
         """Assigns or modifies access level of user given by user_id"""
@@ -98,8 +104,8 @@ class Projects(db.Model):
         project_permission = ProjectPermissions.query.filter_by(project_id=self.project_id,
                                                                 user_id=user_id).first()
         if project_permission is None:
-            return self.student_access
-        return project_permission.access_level
+            return max(self.student_access, self.default_access)
+        return max(self.student_access,self.default_access,project_permission.access_level)
     
     def user_permission_pairs(self):
         """Returns list of tuples (user object, permission_level) sorted by permission level decreasing,
@@ -153,4 +159,16 @@ class ShareLinks(db.Model):
     times_used = Column(Integer, default=0)
     
     project = relationship("Projects", back_populates="share_links")
+
+
+class Comments(db.Model):
+    __tablename__ = "comments"
+    comment_id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey("projects.project_id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.user_id"))
+    time_commented = Column(DateTime)
+    text = Column(Text)
+    
+    project = relationship("Projects", back_populates="comments")
+    user = relationship("Users", back_populates="comments")
 

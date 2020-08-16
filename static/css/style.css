@@ -35,13 +35,13 @@ header{
     display: inline-block;
 }
 
-header .nav{
+/*header .nav{
     display: none;
 }
 
 header:hover .nav{
     display: block;
-}
+}*/
 
 .loginout{
     float: right;
@@ -54,6 +54,33 @@ header:hover .nav{
 .projecttitle{
     width:100%;
     background-color: violet;
+    position: relative;
+}
+
+.projecttitle .thumbnail{
+    position: absolute;
+    top: 5%;
+    right: 5px;
+    height: 90%;
+}
+
+.project_links{
+    background-color: orange;
+}
+
+.project_links a{
+    color: black;
+}
+
+.project_links .thumbnail{
+    height: 90%;
+    top: 5%;
+    float: left;
+}
+
+.project_links tr{
+    background-color: purple;
+    margin: 2px;
 }
 
 .container{
@@ -108,6 +135,10 @@ img.content{
     background-color: teal;
 }
 
+textarea{
+    width: 100%;
+}
+
 footer{
     background-color: lightGreen;
 }
@@ -123,6 +154,7 @@ footer{
     background-color: aquamarine;
     border: 2px solid black;
     border-radius: 10px;
+    overflow-y: overlay;
 }
 
 .tags p{

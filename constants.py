@@ -7,3 +7,5 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__) ) #This is the directory of 
 PROJECTS_FOLDER = os.path.join(APP_DIR,"projects")
 
 SHARE_URL_SIZE = 12
+
+TIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f %Z"

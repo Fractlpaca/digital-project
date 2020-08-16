@@ -4,6 +4,23 @@
 {% block title %}Index{% endblock %}
 
 {% block main %}
-    This is the home page. Ta-da!
+    <table class='project_links'>
+    <tr><th colspan=2>Search Results</th></tr>
+    {% for project in searched_projects %}
+        <tr>
+            <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
+            <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+            <span>{{project.get_description()[:500]}}</span></td>
+        </tr>
+    {% endfor %}
+    <tr><th colspan=2>Public Projects</th></tr>
+    {% for project in public_projects %}
+        <tr>
+            <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
+            <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+            <span>{{project.get_description()[:500]}}</span></td>
+        </tr>
+    {% endfor %}
+    </table>
 {% endblock %}
 

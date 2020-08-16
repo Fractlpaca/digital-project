@@ -6,6 +6,7 @@
     <div class="projecttitle">
         <h1 id="project_name">{{project.name}}</h1>
         <span id="authors">Authors: {{authors}}</span>
+        <img class='thumbnail' src='{{project.thumbnail_route()}}'></img>
     </div><div class='container'>
         <div class='left'>
             <div class="content">
@@ -13,10 +14,19 @@
                 {% endblock %}
             </div>
             <div class="comments">
-                <p>Yeah this is really cool. 10/10.</p>
-                <p>This could use some major imporovement, especially in the top left. Frankly I'm a little bit dissaplointed.</p>
-                <p>Awesome!</p>
-                <p>Where are the coordinates?</p>
+                {% if access_level >= access_from_string["CAN_COMMENT"] %}
+                <form action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
+                    <textarea name="text" rows=3></textarea>
+                    <input type='submit' value='Post'>
+                </form>
+                {% endif %}
+                {% for comment in comments %}
+                <strong>{{comment.user.username}}</strong> at {{comment.time_commented}}.<br>
+                <span>{{comment.text}}</span><br>
+                {% endfor %}
+                {% if comments|length == 0 %}
+                    <span>No Comments</span>
+                {% endif %}
             </div>
         </div><div class='right'>
             <div class="description">
@@ -46,9 +56,13 @@
     <button onclick="document.getElementById('editForm').style.display='block';">Edit Page</button>
     <div class="popup" id="sharing">
         <h3>Sharing</h3>
+        <h4>Link Sharing</h4>
+        {% for share_link in share_links %}
+            <p>{{url_for("invite",project_id_string=project.project_id, invite_string=share_link.url_string)}} grants: {{permission_descriptions[share_link.access_level_granted]}}</p>
+        {% endfor %}
         <form method="POST" action="{{route}}/createShareLink">
-            <select name="access" value="CAN_VIEW" required>
-                <option value="CAN_VIEW">Can View</option>
+            <select name="access" required>
+                <option value="CAN_VIEW" selected>Can View</option>
                 <option value="CAN_COMMENT">Can Comment</option>
                 <option value="CAN_EDIT">Collaborator</option>
                 <option value="SUB_OWNER">Sub-Owner</option>
@@ -65,6 +79,30 @@
             <input type="number" name="minutes" value=0 min=0 max=59 size=3> Minutes<br>
             <input type="submit" value="Create Link">
         </form>
+        <h4>Specific User Sharing</h4>
+        <form method="POST" action="{{route}}/permission">
+            Username: <input type="text" name="username">
+            Access Level: <select name="access_level" required>
+                <option value="NO_ACCESS">Invisible</option>
+                <option value="CAN_VIEW" selected>Can View</option>
+                <option value="CAN_COMMENT">Can Comment</option>
+                <option value="CAN_EDIT">Collaborator</option>
+                <option value="SUB_OWNER">Sub-Owner</option>
+            </select><br>
+            <input type="submit" value="Change User Access">
+        </form>
+        <h4>Default Access</h4>
+        <form method="POST" action="{{route}}/defaultPermission">
+            Currently {{permission_descriptions[project.default_access]}}.<br>
+            Access Level: <select name="default_access" required>
+                <option value="NO_ACCESS">Invisible</option>
+                <option value="CAN_VIEW">Can View</option>
+                <option value="CAN_COMMENT">Can Comment</option>
+                <option value="CAN_EDIT">Collaborator</option>
+                <option value="SUB_OWNER">Sub-Owner</option>
+            </select><br>
+            <input type="submit" value="Change Default Access">
+        </form>
         <button onclick = "document.getElementById('sharing').style.display='none';">Cancel</button>
     </div>
     <button onclick="document.getElementById('sharing').style.display='block';">Edit Sharing</button>
@@ -73,14 +111,41 @@
     {% if access_level >= 5 %}
     <div id="contentForm" class="popup">
         <h3>Content</h3>
+        <h4>Webpage Content</h4>
         <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
             <select name='type' value='{{project.content_type}}' required>
-                <option value="game">Game</option>
+                <option value="game" selected>Game</option>
             </select>
             <!--input type='file' name='files' webkitdirectory mozdirectory-->
             <input type='file' name='file' accept="application/zip" required>
             <input type='submit' value="Upload">
         </form>
+        <h4>Downloads</h4>
+        <table>
+        {% for filename, username, time in download_info%}
+        <tr>
+            <td>{{filename}}</td><td>{{username}}</td><td>{{time}}</td>
+            <td><form action="/project/{{project.project_id}}/download" method="POST">
+                <input type="hidden" name="filename" value='{{filename}}'>
+                <input type="submit" value="Download">
+            </form></td>
+            <td><form action="/project/{{project.project_id}}/deleteDownload" method="POST">
+                <input type="hidden" name="filename" value='{{filename}}'>
+                <input type="submit" value="Delete">
+            </form></td>
+        </tr>
+        {% endfor %}
+        <tr rowspan=4>
+        <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
+            <h5>New Download</h5>
+            <input type="hidden" name='type' value='downloadable' required>
+            <!--input type='file' name='files' webkitdirectory mozdirectory-->
+            <input type='file' name='file' required>
+            <input type='text' name='filename'>
+            <input type='submit' value="Upload">
+        </form>
+        </tr>
+        </table>
         <button onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
     </div>
     <button onclick="document.getElementById('contentForm').style.display='block';">Upload Content</button>
