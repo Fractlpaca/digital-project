@@ -23,17 +23,17 @@ from helper_functions import *
 def index():
     print(current_user is None, flush=True)
     is_logged_in = current_user.is_authenticated
-    username = current_user.username if is_logged_in else None
+    user = current_user if is_logged_in else None
     public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).all()
     return render_template("index.html",
                            is_logged_in=is_logged_in,
-                           username=username,
+                           user=user,
                            public_projects=public_projects)
 
 @app.route("/search")
 def search():
     is_logged_in = current_user.is_authenticated
-    username = current_user.username if is_logged_in else None
+    user = current_user if is_logged_in else None
     search_text = request.args.get("search","").strip().lower()
     if is_logged_in:
         public_projects = Projects.query.filter(or_(Projects.student_access>=CAN_VIEW, Projects.default_access>=CAN_VIEW)).all()
@@ -47,7 +47,7 @@ def search():
             results.append(project)
     return render_template("search.html",
                            is_logged_in=is_logged_in,
-                           username=username,
+                           user=user,
                            results=results)    
 
 
@@ -61,7 +61,7 @@ def dashboard():
     other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).all()
     print(projects_owned,projects_shared,other_projects,flush=True)
     return render_template("dash.html",
-                           username=current_user.username,
+                           user=current_user,
                            projects_owned=projects_owned,
                            projects_shared = projects_shared,
                            other_projects = other_projects,
@@ -145,7 +145,7 @@ def project(project_id_string):
     template_args = {
                      "project": project,
                      "is_logged_in": is_logged_in,
-                     "username": (current_user.username if is_logged_in else None),
+                     "user": (current_user if is_logged_in else None),
                      "access_level": access_level,
                      "route": route,
                      "authors": project.authors.replace(",",", "),
@@ -218,6 +218,25 @@ def deleteDownload(project_id_string):
         abort(404)
     delete_download(project.project_id,request.form.get("filename",""))
     return redirect(f"/project/{project.project_id}")
+
+@app.route("/project/<project_id_string>/deleteComment",methods=["POST"])
+@login_required
+def deleteComment(project_id_string):
+    if current_user.site_access < 1:
+        abort(403)    
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
+    if project is None:
+        abort(404)
+    try:
+        comment_id = int(request.form.get("comment_id",None))
+        comment = Comments.query.filter_by(comment_id=comment_id).first()
+    except TypeError:
+        comment = None
+    if comment is not None:
+        db.session.delete(comment)
+        db.session.commit()
+    return redirect(f"/project/{project.project_id}")
+
 
 @app.route("/project/<project_id_string>/edit", methods=["GET","POST"])
 @login_required
@@ -307,7 +326,7 @@ def projectPermission(project_id_string):
         if added_username is not None:
             added_user = Users.query.filter_by(username=added_username).first()
             if added_user is not None:
-                existing_access = project.access_level(added_user.user_id)
+                existing_access = project.access_level(added_user)
                 if existing_access >= access_level:
                     return redirect(route)
                 new_access = access_from_string.get(request.form.get("access_level", None),None)
@@ -347,7 +366,7 @@ def invite(project_id_string, invite_string):
     if share_link.time_expires is not None and current_time > share_link.time_expires:
         abort(404)
     route = f"/project/{project.project_id}"
-    existing_access = project.access_level(current_user.user_id)
+    existing_access = project.access_level(current_user)
     if share_link.access_level_granted <= existing_access:
         return redirect(route)
     

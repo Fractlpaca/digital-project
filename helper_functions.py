@@ -56,7 +56,7 @@ def handle_project_id_string(project_id_string, threshold_access=CAN_VIEW):
         if project is None:
             abort(404)
         if is_logged_in:
-            access_level = project.access_level(current_user.user_id)
+            access_level = project.access_level(current_user)
         else:
             access_level = project.default_access
         if access_level < threshold_access:

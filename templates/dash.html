@@ -4,7 +4,7 @@
 
 {% block main %}
     <table class='project_links'>
-    <tr><th colspan=2>Public Projects</th></tr>
+    <tr><th colspan=2>Your Projects</th></tr>
     {% for project in projects_owned %}
         <tr>
             <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>

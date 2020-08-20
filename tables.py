@@ -6,7 +6,8 @@ Contains flask_sqlalchemy database and flask app initialisation.
 
 from flask import Flask, request, url_for, redirect, render_template, render_template_string, flash, session, abort, send_from_directory, send_file
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
-
+from flask_admin import Admin
+from flask_admin.contrib.sqla import ModelView
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, or_
 from sqlalchemy.orm import relationship
@@ -97,12 +98,14 @@ class Projects(db.Model):
         db.session.commit()
         self.update_time()   
     
-    def access_level(self, user_id=None):
+    def access_level(self, user=None):
         """Returns access level of user given by user_id, or default access level if user_id is None"""
-        if user_id is None:
+        if user is None:
             return self.default_access
+        if user.site_access == ADMIN:
+            return OWNER
         project_permission = ProjectPermissions.query.filter_by(project_id=self.project_id,
-                                                                user_id=user_id).first()
+                                                                user_id=user.user_id).first()
         if project_permission is None:
             return max(self.student_access, self.default_access)
         return max(self.student_access,self.default_access,project_permission.access_level)
@@ -172,3 +175,15 @@ class Comments(db.Model):
     project = relationship("Projects", back_populates="comments")
     user = relationship("Users", back_populates="comments")
 
+
+class AdminView(ModelView):
+    def is_accessible(self):
+        if current_user.is_authenticated:
+            return current_user.site_access >= ADMIN
+        return False
+
+
+admin = Admin(app)
+admin.add_view(AdminView(Users, db.session))
+admin.add_view(AdminView(Projects, db.session))
+admin.add_view(AdminView(Comments, db.session))

@@ -17,7 +17,7 @@
         </div>
         <div class='loginout'>
             {% if is_logged_in %}
-            <p>Logged in as <strong>{{username}}</strong>.</p>
+            <p>Logged in as <strong>{{user.username}}</strong>.</p>
             <p><a href='{{url_for("logout")}}'>Logout</a>
             {% else %}
             <p>Not logged in.</p>

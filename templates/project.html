@@ -7,7 +7,7 @@
         <div id="project_title">
             <h1>{{project.name}}</h1>
             {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <button id="title_button" onclick="show('title_form');hide('project_title');">Edit Title</button>
+            <button id="title_button" onclick="show('title_form');hide('project_title');">Edit</button>
             </div>
             <div id=title_form>
             <form method="POST" action="{{route}}/edit">
@@ -36,7 +36,7 @@
         <div id="thumbnail">
             <img class='thumbnail' src='{{project.thumbnail_route()}}'></img>
         {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <img class='thumbnail' id="thumbnail_button" src="/static/images/change_thumbnail.png" onclick="show('thumbnail_form');">Edit</img>
+            <img class='thumbnail' id="thumbnail_button" src="/static/images/change_thumbnail.png" onclick="show('thumbnail_form');"></img>
         </div>
         <div id="thumbnail_form" class='popup'>
             <form method="POST" enctype="multipart/form-data" action="{{route}}/edit">
@@ -114,7 +114,14 @@
                 {% endif %}
                 {% for comment in comments %}
                 <strong>{{comment.user.username}}</strong> at {{comment.time_commented}}.<br>
-                <span>{{comment.text}}</span><br>
+                <span>{{comment.text}}</span>
+                {% if user.site_access >= 1 %}
+                <form action="{{route}}/deleteComment" method="POST">
+                    <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
+                    <input type=submit value="Remove Comment">
+                </form>
+                {% endif %}
+                <br>
                 {% endfor %}
                 {% if comments|length == 0 %}
                     <span>No Comments</span>
