@@ -40,15 +40,15 @@ def search():
     else:
         public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).all()
     print(public_projects, flush=True)
-    searched_projects=[]
+    results=[]
     for project in public_projects:
         print(project.name, project.tags, search_text, flush=True)
         if search_text in str(project.name).lower() or search_text in str(project.tags).lower():
-            searched_projects.append(project)
-    return render_template("index.html",
+            results.append(project)
+    return render_template("search.html",
                            is_logged_in=is_logged_in,
                            username=username,
-                           searched_projects=searched_projects)    
+                           results=results)    
 
 
 @app.route("/dashboard")
@@ -134,7 +134,7 @@ def project(project_id_string):
     access_level_string = access_messages[access_level]
     route=f"/project/{project.project_id}"
     permission_pairs = project.user_permission_pairs()
-    permission_pair_names = [(user.username, permission_descriptions[permission]) for user, permission in permission_pairs]
+    permission_pair_names = [(user.username, access_descriptions[permission]) for user, permission in permission_pairs]
     print(permission_pair_names, flush=True)
     download_info = list(get_download_info(project.project_id))
     current_time=datetime.now(timezone.utc)
@@ -147,10 +147,7 @@ def project(project_id_string):
                      "is_logged_in": is_logged_in,
                      "username": (current_user.username if is_logged_in else None),
                      "access_level": access_level,
-                     "access_level_string": access_level_string,
                      "route": route,
-                     "upload_route": f"{route}/upload",
-                     "permission_pair_names": permission_pair_names,
                      "authors": project.authors.replace(",",", "),
                      "tags_list": project.tags.split(","),
                      "tags": project.tags.replace(",", ", "),
@@ -159,7 +156,7 @@ def project(project_id_string):
                      "share_links": share_links,
                      "comments": project.comments,
                      "access_from_string": access_from_string,
-                     "permission_descriptions": permission_descriptions
+                     "access_descriptions": access_descriptions
     }
     content_type=project.content_type
     return render_template("content/game.html",
@@ -170,7 +167,7 @@ def thumbnail(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
-    for extension in ["png","jpeg","jpg","gif"]:
+    for extension in THUMBNAIL_EXTENSIONS:
         if os.path.exists(f"projects/{project.project_id}/thumbnail.{extension}"):
             return send_from_directory(f"projects/{project.project_id}", f"thumbnail.{extension}")
     return send_from_directory(f"static/images","default_thumbnail.png")
@@ -225,7 +222,7 @@ def deleteDownload(project_id_string):
 @app.route("/project/<project_id_string>/edit", methods=["GET","POST"])
 @login_required
 def editProject(project_id_string):
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)    
     if request.method == "POST":
@@ -246,6 +243,15 @@ def editProject(project_id_string):
         if tags != "":
             project.set_tags(tags)
         
+        file = request.files.get("thumbnail")
+        thumbnail_path = os.path.join(PROJECTS_FOLDER,str(project.project_id))
+        thumbnail_path = os.path.join(thumbnail_path, "thumbnail")
+        if file is not None:
+            for extension in THUMBNAIL_EXTENSIONS:
+                if file.mimetype==f"image/{extension}":
+                    file.save(f"{thumbnail_path}.{extension}")
+        project.update_time()
+         
     return redirect(f"/project/{project.project_id}")
 
 @app.route("/project/<project_id_string>/upload", methods=["POST"])

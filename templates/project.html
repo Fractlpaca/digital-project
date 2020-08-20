@@ -3,15 +3,107 @@
 {% block title %}{{project.name}}{% endblock %}
 
 {% block main %}
-    <div class="projecttitle">
-        <h1 id="project_name">{{project.name}}</h1>
-        <span id="authors">Authors: {{authors}}</span>
-        <img class='thumbnail' src='{{project.thumbnail_route()}}'></img>
+    <div class="titlebar">
+        <div id="project_title">
+            <h1>{{project.name}}</h1>
+            {% if access_level >= access_from_string["CAN_EDIT"] %}
+            <button id="title_button" onclick="show('title_form');hide('project_title');">Edit Title</button>
+            </div>
+            <div id=title_form>
+            <form method="POST" action="{{route}}/edit">
+                <input type="text" name="title" value="{{project.name}}">
+                <input type="submit" value="Change">
+            </form>
+            <button onclick="show('project_title');hide('title_form')">Cancel</button>
+            {% endif %}
+        </div><br>
+        
+        
+        <div id="authors">
+            Authors: {{authors}}
+        {% if access_level >= access_from_string["CAN_EDIT"] %}
+            <button id="title_button" onclick="show('authors_form');hide('authors');">Edit</button>
+        </div>
+        <div id=authors_form>
+            <form method="POST" action="{{route}}/edit">
+                <input type="text" name="authors" value="{{authors}}">
+                <input type="submit" value="Change">
+            </form>
+            <button onclick="show('authors');hide('authors_form')">Cancel</button>
+        {% endif %}
+        </div>
+        
+        <div id="thumbnail">
+            <img class='thumbnail' src='{{project.thumbnail_route()}}'></img>
+        {% if access_level >= access_from_string["CAN_EDIT"] %}
+            <img class='thumbnail' id="thumbnail_button" src="/static/images/change_thumbnail.png" onclick="show('thumbnail_form');">Edit</img>
+        </div>
+        <div id="thumbnail_form" class='popup'>
+            <form method="POST" enctype="multipart/form-data" action="{{route}}/edit">
+                <input type="file" name="thumbnail" accept="image/png, image/jpeg,image/gif"><br>
+                <input type="submit" value="Change">
+            </form>
+            <button onclick="hide('thumbnail_form')">Cancel</button>
+        {% endif %}
+        </div>
+        
     </div><div class='container'>
+    
+    
+    
         <div class='left'>
             <div class="content">
                 {% block content %}
                 {% endblock %}
+                {% if access_level >= access_from_string["CAN_EDIT"] %}
+                <div id="contentForm" class="popup">
+                    <h3>Content</h3>
+                    <h4>Webpage Content</h4>
+                    <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
+                        <select name='type' value='{{project.content_type}}' required>
+                            <option value="game" selected>Game</option>
+                        </select>
+                        <!--input type='file' name='files' webkitdirectory mozdirectory-->
+                        <input type='file' name='file' accept="application/zip" required>
+                        <input type='submit' value="Upload">
+                    </form>
+                    <button onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
+                </div>
+                <button onclick="document.getElementById('contentForm').style.display='block';">Upload Content</button>
+                {% endif %}
+            </div>
+            
+            
+            
+            <div class="downloads">
+            <h4>{% if download | length ==0 %}No Downloads{% else %}Downloads{% endif %}</h4>
+            <table>
+            {% for filename, username, time in download_info%}
+            <tr>
+                <td>{{filename}}</td><td>{{username}}</td><td>{{time}}</td>
+                <td><form action="/project/{{project.project_id}}/download" method="POST">
+                    <input type="hidden" name="filename" value='{{filename}}'>
+                    <input type="submit" value="Download">
+                </form></td>
+                <td><form action="/project/{{project.project_id}}/deleteDownload" method="POST">
+                    <input type="hidden" name="filename" value='{{filename}}'>
+                    <input type="submit" value="Delete">
+                </form></td>
+            </tr>
+            {% endfor %}
+            {% if access_level >= access_from_string["CAN_EDIT"] %}
+            <tr rowspan=4>
+            <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
+                <h5>New Download</h5>
+                <input type="hidden" name='type' value='downloadable' required>
+                <!--input type='file' name='files' webkitdirectory mozdirectory-->
+                <input type='file' name='file' required>
+                <input type='text' name='filename'>
+                <input type='submit' value="Upload">
+            </form>
+            </tr>
+            {% endif %}
+            </table>
             </div>
             <div class="comments">
                 {% if access_level >= access_from_string["CAN_COMMENT"] %}
@@ -29,36 +121,46 @@
                 {% endif %}
             </div>
         </div><div class='right'>
-            <div class="description">
-                <h3>Description:</h3>
+            <h3>Description:</h3>
+            <div class="description" id="description">
                 <p>{{description}}</p>
+                {% if access_level >= access_from_string["CAN_EDIT"] %}
+                <button id="description_button" onclick="show('description_form');hide('description');">Edit</button>
             </div>
-            <div class="tags">
-                <h3>Tags:</h3>
+            <div id=description_form>
+                <form method="POST" action="{{route}}/edit">
+                    <textarea type="text" name="description" rows=10>{{description}}</textarea>
+                    <input type="submit" value="Change">
+                </form>
+                <button onclick="show('description');hide('description_form')">Cancel</button>
+                {% endif %}
+            </div>
+            <h3>Tags:</h3>
+            <div class="tags" id="tags">
                 {% for tag in tags_list %}
                     <p>{{tag}}</p>
                 {% endfor %}
+                {% if access_level >= access_from_string["CAN_EDIT"] %}
+                <button id="tags_button" onclick="show('tags_form');hide('tags');">Edit</button>
+            </div>
+            <div id="tags_form">
+                <form method="POST" action="{{route}}/edit">
+                    <input type="text" name="tags" value="{{tags}}">
+                    <input type="submit" value="Change">
+                </form>
+                <button onclick="show('tags');hide('tags_form')">Cancel</button>
+                {% endif %}
             </div>
         </div>
     </div>
-    {% if access_level >= 6 %}
-    <div class="popup" id="editForm">
-        <h3>Metadata</h3>
-        <form method="POST" action="{{route}}/edit">
-            Title: <input type="text" name="title" value="{{project.name}}"><br>
-            Authors: <input type="text" name="authors" value="{{authors}}"><br>
-            Tags: <input tupe="text" name="tags" value="{{tags}}"><br>
-            Description:<br><textarea name="description" cols=50 rows=10>{{description}}</textarea><br>
-            <input type="submit" value="Make Changes">
-        </form>
-        <button onclick = "document.getElementById('editForm').style.display='none';">Cancel</button>
-    </div>
-    <button onclick="document.getElementById('editForm').style.display='block';">Edit Page</button>
+    
+    
+    {% if access_level >= access_from_string["CAN_EDIT"] %}
     <div class="popup" id="sharing">
         <h3>Sharing</h3>
         <h4>Link Sharing</h4>
         {% for share_link in share_links %}
-            <p>{{url_for("invite",project_id_string=project.project_id, invite_string=share_link.url_string)}} grants: {{permission_descriptions[share_link.access_level_granted]}}</p>
+            <p>{{url_for("invite",project_id_string=project.project_id, invite_string=share_link.url_string)}} grants: {{access_descriptions[share_link.access_level_granted]}}</p>
         {% endfor %}
         <form method="POST" action="{{route}}/createShareLink">
             <select name="access" required>
@@ -93,7 +195,7 @@
         </form>
         <h4>Default Access</h4>
         <form method="POST" action="{{route}}/defaultPermission">
-            Currently {{permission_descriptions[project.default_access]}}.<br>
+            Currently {{access_descriptions[project.default_access]}}.<br>
             Access Level: <select name="default_access" required>
                 <option value="NO_ACCESS">Invisible</option>
                 <option value="CAN_VIEW">Can View</option>
@@ -103,51 +205,11 @@
             </select><br>
             <input type="submit" value="Change Default Access">
         </form>
-        <button onclick = "document.getElementById('sharing').style.display='none';">Cancel</button>
+        <button onclick = "hide('sharing')">Cancel</button>
     </div>
-    <button onclick="document.getElementById('sharing').style.display='block';">Edit Sharing</button>
+    <button onclick="show('sharing')">Edit Sharing</button>
     {% endif %}
     
-    {% if access_level >= 5 %}
-    <div id="contentForm" class="popup">
-        <h3>Content</h3>
-        <h4>Webpage Content</h4>
-        <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
-            <select name='type' value='{{project.content_type}}' required>
-                <option value="game" selected>Game</option>
-            </select>
-            <!--input type='file' name='files' webkitdirectory mozdirectory-->
-            <input type='file' name='file' accept="application/zip" required>
-            <input type='submit' value="Upload">
-        </form>
-        <h4>Downloads</h4>
-        <table>
-        {% for filename, username, time in download_info%}
-        <tr>
-            <td>{{filename}}</td><td>{{username}}</td><td>{{time}}</td>
-            <td><form action="/project/{{project.project_id}}/download" method="POST">
-                <input type="hidden" name="filename" value='{{filename}}'>
-                <input type="submit" value="Download">
-            </form></td>
-            <td><form action="/project/{{project.project_id}}/deleteDownload" method="POST">
-                <input type="hidden" name="filename" value='{{filename}}'>
-                <input type="submit" value="Delete">
-            </form></td>
-        </tr>
-        {% endfor %}
-        <tr rowspan=4>
-        <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
-            <h5>New Download</h5>
-            <input type="hidden" name='type' value='downloadable' required>
-            <!--input type='file' name='files' webkitdirectory mozdirectory-->
-            <input type='file' name='file' required>
-            <input type='text' name='filename'>
-            <input type='submit' value="Upload">
-        </form>
-        </tr>
-        </table>
-        <button onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
-    </div>
-    <button onclick="document.getElementById('contentForm').style.display='block';">Upload Content</button>
-    {% endif %}
+    
+    <script src="/static/js/project.js"></script>
 {% endblock %}

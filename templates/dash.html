@@ -3,17 +3,22 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block main %}
-    <h3>Your Projects:</h3>
+    <table class='project_links'>
+    <tr><th colspan=2>Public Projects</th></tr>
     {% for project in projects_owned %}
-        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a><br>
+        <tr>
+            <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
+            <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+            <span>{{project.get_description()[:500]}}</span></td>
+        </tr>
     {% endfor %}
-    <a href="{{ url_for('newProject') }}"><button>New Project</button></a>
-    <h3>Projects Shared With You</h3>
+    <tr><th colspan=2>Projects Shared With You</th></tr>
     {% for project in projects_shared %}
-        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a><br>
+        <tr>
+            <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
+            <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+            <span>{{project.get_description()[:500]}}</span></td>
+        </tr>
     {% endfor %}
-    <h3>Public Projects</h3>
-    {% for project in other_projects %}
-        <a href='{{url_for("project",project_id_string=project.project_id)}}'>{{project.name}}</a><br>
-    {% endfor %}
+    </table>
 {% endblock %}

@@ -51,17 +51,45 @@ header:hover .nav{
     background-color: green;
 }
 
-.projecttitle{
+.titlebar{
     width:100%;
     background-color: violet;
     position: relative;
 }
 
-.projecttitle .thumbnail{
+.titlebar form{
+    display: inline-block;
+}
+
+#title_form input[type='text']{
+    font-size: 24px;
+}
+
+#project_title h1{
+   display: inline-block; 
+}
+
+#title_form, #description_form, #tags_form, #authors_form, #thumbnail_form{
+    display: none;
+}
+
+.titlebar .thumbnail{
     position: absolute;
     top: 5%;
     right: 5px;
     height: 90%;
+}
+
+#thumbnail_button{
+    display: none;
+}
+
+.thumbnail:hover + #thumbnail_button{
+    display: block;
+}
+
+#thumbnail_button:hover{
+    display: block;
 }
 
 .project_links{
@@ -106,6 +134,11 @@ header:hover .nav{
     margin: 0px;
     background-color: blue;
     padding: 2px;
+}
+
+.project_links .thumbnail{
+    width: 100px;
+    height: auto;
 }
 
 .right h3{
@@ -155,6 +188,7 @@ footer{
     border: 2px solid black;
     border-radius: 10px;
     overflow-y: overlay;
+    z-index: 100;
 }
 
 .tags p{

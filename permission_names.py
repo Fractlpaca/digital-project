@@ -35,7 +35,7 @@ access_messages = {
     OWNER: "You are the primary owner."
 }
 
-permission_descriptions = {
+access_descriptions = {
     BANNED: "Totaly Banned",
     NO_ACCESS: "Completly Oblivious",
     CAN_SEE: "Cannot View",

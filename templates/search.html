@@ -1,0 +1,19 @@
+{% extends "index.html" %}
+
+{% block list %}
+    {% if results|length == 0 %}
+        <p>No results.</p>
+    {% else %}
+        <table class='project_links'>
+        <tr><th colspan=2>Search Results</th></tr>
+        {% for project in results %}
+            <tr>
+                <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
+                <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+                <span>{{project.get_description()[:500]}}</span></td>
+            </tr>
+        {% endfor %}
+        </table>
+    {% endif %}
+    
+{% endblock %}

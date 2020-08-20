@@ -9,3 +9,5 @@ PROJECTS_FOLDER = os.path.join(APP_DIR,"projects")
 SHARE_URL_SIZE = 12
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f %Z"
+
+THUMBNAIL_EXTENSIONS = ["png","jpeg","jpg","gif"]
