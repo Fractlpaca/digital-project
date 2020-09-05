@@ -7,26 +7,17 @@
 	<link rel="icon" href="/static/images/icon.png">
 </head>
 
-<body>
+<body onresize='{% block resize %}{% endblock %}'>
+    {% block header %}
     <header>
-    {% block titlebar %}
-    <div class="titlebar">
-        <div>
-        <a href='{{url_for("index")}}'><img src="/static/images/home.png"></img></a>
-        <h1>BHS Showcase</h1>
+        <div id="logo">
+            <a href='{{url_for("index")}}'><img src="/static/images/home.png"></img></a>
         </div>
-        <div class='loginout'>
-            {% if is_logged_in %}
-            <p>Logged in as <strong>{{user.username}}</strong>.</p>
-            <p><a href='{{url_for("logout")}}'>Logout</a>
-            {% else %}
-            <p>Not logged in.</p>
-            <p><a href='{{url_for("login")}}'>Login</a> or <a href='{{url_for("register")}}'>Register</a></p>
-            {% endif %}
+        <div id="heading">
+            <h1>Game Design Showcase</h1><br>
         </div>
-    </div>
-    {% block navbar %}
-    <div class='nav'>
+        <div id="nav">
+        {% block navbar %}
         <nav>
             <a href='{{url_for("index")}}'>Home</a>
             {% if is_logged_in %}
@@ -34,15 +25,24 @@
             {% endif %}
             
         </nav>
-        <form method='GET' action='/search' style='display: inline-block;'>
+        <form method='GET' action='/search'>
             <input type='text' name='search'><input type='submit' value='Search'>
         </form>
-    </div>
-    {% endblock %}
+        {% endblock %}
+        </div>
+        <div id='loginout'>
+            {% if is_logged_in %}
+            Logged in as <strong>{{user.username}}</strong>.<br>
+            <a href='{{url_for("logout")}}'>Logout</a>
+            {% else %}
+            Not logged in.<br>
+            <a href='{{url_for("login")}}'>Login</a> or <a href='{{url_for("register")}}'>Register</a>
+            {% endif %}
+        </div>
     </header>
     {% endblock %}
 	
-	<main>
+	<main id='main'>
 	{% block main %}
 	{% endblock %}
 	</main>
@@ -50,6 +50,7 @@
 	{% block footer %}
 	<footer>
         <p>Just some placeholder text.</p>
+        <p>And some more for luck.</p>
 	</footer>
 	{% endblock %}
 </body>

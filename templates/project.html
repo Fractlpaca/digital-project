@@ -4,33 +4,20 @@
 
 {% block main %}
     <div class="titlebar">
+        <div class='centered'>
         <div id="project_title">
             <h1>{{project.name}}</h1>
             {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <button id="title_button" onclick="show('title_form');hide('project_title');">Edit</button>
+            <button onclick="show('title_form');hide('project_title');">Edit</button>
             </div>
             <div id=title_form>
             <form method="POST" action="{{route}}/edit">
                 <input type="text" name="title" value="{{project.name}}">
                 <input type="submit" value="Change">
             </form>
-            <button onclick="show('project_title');hide('title_form')">Cancel</button>
+            <button class='cancel' onclick="show('project_title');hide('title_form')">Cancel</button>
             {% endif %}
-        </div><br>
-        
-        
-        <div id="authors">
-            Authors: {{authors}}
-        {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <button id="title_button" onclick="show('authors_form');hide('authors');">Edit</button>
         </div>
-        <div id=authors_form>
-            <form method="POST" action="{{route}}/edit">
-                <input type="text" name="authors" value="{{authors}}">
-                <input type="submit" value="Change">
-            </form>
-            <button onclick="show('authors');hide('authors_form')">Cancel</button>
-        {% endif %}
         </div>
         
         <div id="thumbnail">
@@ -43,16 +30,17 @@
                 <input type="file" name="thumbnail" accept="image/png, image/jpeg,image/gif"><br>
                 <input type="submit" value="Change">
             </form>
-            <button onclick="hide('thumbnail_form')">Cancel</button>
+            <button class='cancel' onclick="hide('thumbnail_form')">Cancel</button>
         {% endif %}
         </div>
         
-    </div><div class='container'>
+    </div>
     
     
+    <div class='container'>
     
-        <div class='left'>
-            <div class="content">
+        <div class='left' id='left'>
+            <div id='content' class="content">
                 {% block content %}
                 {% endblock %}
                 {% if access_level >= access_from_string["CAN_EDIT"] %}
@@ -67,14 +55,11 @@
                         <input type='file' name='file' accept="application/zip" required>
                         <input type='submit' value="Upload">
                     </form>
-                    <button onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
+                    <button class='cancel' onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
                 </div>
                 <button onclick="document.getElementById('contentForm').style.display='block';">Upload Content</button>
                 {% endif %}
             </div>
-            
-            
-            
             <div class="downloads">
             <h4>{% if download | length ==0 %}No Downloads{% else %}Downloads{% endif %}</h4>
             <table>
@@ -105,28 +90,7 @@
             {% endif %}
             </table>
             </div>
-            <div class="comments">
-                {% if access_level >= access_from_string["CAN_COMMENT"] %}
-                <form action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
-                    <textarea name="text" rows=3></textarea>
-                    <input type='submit' value='Post'>
-                </form>
-                {% endif %}
-                {% for comment in comments %}
-                <strong>{{comment.user.username}}</strong> at {{comment.time_commented}}.<br>
-                <span>{{comment.text}}</span>
-                {% if user.site_access >= 1 %}
-                <form action="{{route}}/deleteComment" method="POST">
-                    <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
-                    <input type=submit value="Remove Comment">
-                </form>
-                {% endif %}
-                <br>
-                {% endfor %}
-                {% if comments|length == 0 %}
-                    <span>No Comments</span>
-                {% endif %}
-            </div>
+            
         </div><div class='right'>
             <h3>Description:</h3>
             <div class="description" id="description">
@@ -139,7 +103,7 @@
                     <textarea type="text" name="description" rows=10>{{description}}</textarea>
                     <input type="submit" value="Change">
                 </form>
-                <button onclick="show('description');hide('description_form')">Cancel</button>
+                <button class='cancel' onclick="show('description');hide('description_form')">Cancel</button>
                 {% endif %}
             </div>
             <h3>Tags:</h3>
@@ -155,12 +119,48 @@
                     <input type="text" name="tags" value="{{tags}}">
                     <input type="submit" value="Change">
                 </form>
-                <button onclick="show('tags');hide('tags_form')">Cancel</button>
+                <button class='cancel' onclick="show('tags');hide('tags_form')">Cancel</button>
                 {% endif %}
+            </div>
+            <h3>Authors</h3>
+            <div class="authors" id="authors">
+                {{authors}}<br>
+            {% if access_level >= access_from_string["CAN_EDIT"] %}
+                <button onclick="show('authors_form');hide('authors');">Edit</button>
+            </div>
+            <div id=authors_form>
+                <form method="POST" action="{{route}}/edit">
+                    <input type="text" name="authors" value="{{authors}}">
+                    <input type="submit" value="Change">
+                </form>
+                <button class='cancel' onclick="show('authors');hide('authors_form')">Cancel</button>
+            {% endif %}
             </div>
         </div>
     </div>
     
+    <div class="comments">
+        {% if access_level >= access_from_string["CAN_COMMENT"] %}
+        <form action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
+            <textarea name="text" rows=3></textarea>
+            <input type='submit' value='Post'>
+        </form>
+        {% endif %}
+        {% for comment in comments %}
+        <strong>{{comment.user.username}}</strong> at {{comment.time_commented}}.<br>
+        <span>{{comment.text}}</span>
+        {% if site_access >= 1 %}
+        <form action="{{route}}/deleteComment" method="POST">
+            <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
+            <input type=submit value="Remove Comment">
+        </form>
+        {% endif %}
+        <br>
+        {% endfor %}
+        {% if comments|length == 0 %}
+            <span>No Comments</span>
+        {% endif %}
+    </div>
     
     {% if access_level >= access_from_string["CAN_EDIT"] %}
     <div class="popup" id="sharing">
@@ -212,11 +212,15 @@
             </select><br>
             <input type="submit" value="Change Default Access">
         </form>
-        <button onclick = "hide('sharing')">Cancel</button>
+        <button class='cancel' onclick = "hide('sharing')">Cancel</button>
     </div>
     <button onclick="show('sharing')">Edit Sharing</button>
     {% endif %}
     
     
     <script src="/static/js/project.js"></script>
+{% endblock %}
+
+{% block resize %}
+resizeContent();
 {% endblock %}

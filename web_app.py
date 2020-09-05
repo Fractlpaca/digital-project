@@ -146,6 +146,7 @@ def project(project_id_string):
                      "project": project,
                      "is_logged_in": is_logged_in,
                      "user": (current_user if is_logged_in else None),
+                     "site_access": (current_user.site_access if is_logged_in else 0),
                      "access_level": access_level,
                      "route": route,
                      "authors": project.authors.replace(",",", "),
@@ -176,12 +177,14 @@ def thumbnail(project_id_string):
 def webGL(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
-        abort(404)    
-    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/","index.html")
-    return "Temporarily disabled"
+        abort(404)
+    #print("WEBGL"+project_id_string,flush=True)
+    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    #return "Temporarily disabled"
 
 @app.route("/project/<project_id_string>/<folder>/<path:path>",methods=["GET"])
 def gamedata(project_id_string, folder, path):
+    #print("GAMEDATA"+project_id_string,flush=True)
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
@@ -340,7 +343,7 @@ def projectPermission(project_id_string):
 
 @app.route("/project/<project_id_string>/defaultPermission", methods=["POST"])
 def defaultProjectPermission(project_id_string):
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, NO_ACCESS)
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)
     default_access=access_from_string.get(request.form.get("default_access",None),project.default_access)
