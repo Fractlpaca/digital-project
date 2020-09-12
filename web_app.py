@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 
 #Own imports:
-from permission_names import *
+from access_names import *
 from constants import *
 from tables import *
 from helper_functions import *
@@ -57,7 +57,7 @@ def dashboard():
     user_id = current_user.get_id()
     projects_owned = current_user.projects_owned
     projects_shared = ProjectPermissions.query.filter(ProjectPermissions.user_id==user_id, CAN_VIEW <= ProjectPermissions.access_level, ProjectPermissions.access_level< OWNER).all()
-    projects_shared = [project_permission.project for project_permission in projects_shared]
+    projects_shared = [project_access.project for project_access in projects_shared]
     other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).all()
     print(projects_owned,projects_shared,other_projects,flush=True)
     return render_template("dash.html",
@@ -132,15 +132,12 @@ def project(project_id_string):
         abort(404)    
     access_level_string = access_messages[access_level]
     route=f"/project/{project.project_id}"
-    permission_pairs = project.user_permission_pairs()
-    permission_pair_names = [(user.username, access_descriptions[permission]) for user, permission in permission_pairs]
-    print(permission_pair_names, flush=True)
+    access_pairs = project.user_access_pairs()
     download_info = list(get_download_info(project.project_id))
     current_time=datetime.now(TIMEZONE)
     download_info.sort(key=lambda x:(current_time-x[2],x[0],x[1]))
     download_info =[(filename, username, format_time_delta(datetime.now(timezone.utc)-time)) for filename, username, time in download_info]
     share_links = ShareLinks.query.filter(ShareLinks.project_id==project.project_id, ShareLinks.access_level_granted<=access_level)
-    print(project.comments, flush=True)
     base_template_args = {
         "is_logged_in": is_logged_in,
         "user": (current_user if is_logged_in else None),
@@ -160,7 +157,8 @@ def project(project_id_string):
         "share_links": share_links,
         "comments": project.comments,
         "access_from_string": access_from_string,
-        "access_descriptions": access_descriptions
+        "access_descriptions": access_descriptions,
+        "access_pairs": access_pairs
     }
     content_type=project.content_type
     return render_template("content/game.html",
@@ -322,8 +320,8 @@ def upload(project_id_string):
     
     
 @login_required
-@app.route("/project/<project_id_string>/permission", methods=["POST"])
-def projectPermission(project_id_string):
+@app.route("/project/<project_id_string>/access", methods=["POST"])
+def projectAccess(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404) 
@@ -345,8 +343,30 @@ def projectPermission(project_id_string):
                 project.assign_project_access(added_user.user_id, new_access)
     return redirect(route)
 
-@app.route("/project/<project_id_string>/defaultPermission", methods=["POST"])
-def defaultProjectPermission(project_id_string):
+
+@login_required
+@app.route("/project/<project_id_string>/deleteAccess", methods=["POST"])
+def deleteProjectAccess(project_id_string):
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
+    if project is None:
+        abort(404) 
+    route = f"/project/{project.project_id}"
+    if request.form:
+        added_username = request.form.get("username", None)
+        if added_username is not None:
+            added_user = Users.query.filter_by(username=added_username).first()
+            if added_user is not None:
+                existing_access = ProjectPermissions.query.filter_by(user_id=added_user.user_id,project_id=project.project_id).first()
+                if existing_access.access_level >= access_level:
+                    return redirect(route)
+                else:
+                    db.session.delete(existing_access)
+                    db.session.commit()
+    return redirect(route)
+
+
+@app.route("/project/<project_id_string>/defaultAccess", methods=["POST"])
+def defaultProjectPermissions(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)
@@ -407,6 +427,7 @@ def create_share_link(project_id_string):
         current_time = datetime.now(timezone.utc)
         expirable = form.get("expirable", None) == "expirable"
         if expirable:
+            print("Time is", form.get('datetime'),flush=True)
             try:
                 days = max(0, int(form.get("days", 7)))
                 hours = max(0, int(form.get("hours", 0)))
@@ -436,6 +457,25 @@ def create_share_link(project_id_string):
         db.session.commit()
     return redirect(route)
 
+@app.route("/project/<project_id_string>/simpleShare",methods=["POST"])
+def simpleShare(project_id_string):
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
+    if project is None:
+        abort(404)
+    setting = request.form.get("setting", None)
+    if setting is not None:
+        if setting == "private":
+            project.default_access=NO_ACCESS
+            project.student_access=NO_ACCESS
+        elif setting == "class":
+            project.default_access=NO_ACCESS
+            project.student_access=CAN_COMMENT
+        elif setting == "public":
+            project.default_access = CAN_VIEW
+            project.student_access = CAN_COMMENT
+    db.session.commit()
+    return redirect(f"/project/{project.project_id}")
+    
 
 @app.route("/project/<project_id_string>/comment", methods=["POST"])
 def comment(project_id_string):
@@ -446,7 +486,7 @@ def comment(project_id_string):
     
     new_comment_text = request.form.get("text", None)
     current_time = datetime.now(TIMEZONE)
-    if new_comment_text is not None:
+    if new_comment_text is not None and new_comment_text != "":
         new_comment = Comments(project_id=project.project_id,
                                user_id=current_user.user_id if is_logged_in else None,
                                time_commented=current_time,

@@ -50,6 +50,10 @@ a{
     color: white;
 }
 
+h3{
+    margin: 7px 0px 10px 0px;
+}
+
 #nav form{
     display: inline-block;
 }
@@ -167,6 +171,8 @@ main.index{
 
 textarea{
     resize: vertical;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    font-size: medium;
 }
 
 .left{
@@ -252,11 +258,34 @@ img.content{
 }
 
 .comment{
-    background-color: #bbbbbb;
-    margin: 2px;
+    background-color: #bbb;
+    margin: 8px;
     padding: 2px;
 }
 
+.comment p{
+    white-space: pre-line;
+    margin: 2px 0px 2px 0px;
+    background-color: #aaa;
+}
+
+.comment div{
+    height: 23px;
+}
+
+.comment span{
+    float: right;
+    margin-right: 7px;
+}
+
+.comment form{
+    float: right;
+}
+
+input.delete{
+    background-color: #ef6060;
+    border-color: #987e58;
+}
 
 textarea{
     width: calc(100% - 5px);
@@ -266,15 +295,23 @@ textarea{
     display: none;
     position: fixed;
     padding: 10px;
-    left: 25%;
+    left: 15%;
     top: 10%;
     bottom: 10%;
-    right: 25%;
-    background-color: aquamarine;
+    right: 15%;
+    background-color: rgb(187 187 187 / 0.9);
     border: 2px solid black;
     border-radius: 10px;
-    overflow-y: overlay;
     z-index: 100;
+}
+
+.popup > div{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    overflow-y: overlay;
 }
 
 .tags p{
@@ -285,6 +322,37 @@ footer{
     width: 100%;
     background-color: #155d1e;
     overflow: overlay;
+}
+
+.hidden{
+    display: none;
+}
+
+input[type='number']{
+    width: 50px;
+}
+
+div.user_access{
+    position: relative;
+    background-color: #aaa;
+    height: 30px;
+    margin: 6px 0px;
+    width: calc(100% - 20px);
+}
+
+.user_access form{
+    position: absolute;
+    right: 3px;
+    top: 3px;
+}
+
+.popup .cancel{
+    float: right;
+    margin-right: 20px;
+}
+
+button, input[tyoe='submit']{
+    border-radius: 4px;
 }
 
 /*

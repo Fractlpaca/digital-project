@@ -142,6 +142,7 @@
     </div>
     
     <div class="comments">
+        <h3>Comments</h3>
         {% if access_level >= access_from_string["CAN_COMMENT"] %}
         <form id='comment' action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
             <textarea name="text" rows=3></textarea>
@@ -150,16 +151,19 @@
             </div>
         </form>
         {% endif %}
-        {% for comment in comments %}
+        {% for comment in comments|reverse %}
         <div class='comment'>
-            <strong>{{comment.user.username}}</strong> {{format_time_delta(current_time-comment.get_time_commented())}}.<br>
-            <span>{{comment.text}}</span>
-            {% if site_access >= 1 %}
-            <form action="{{route}}/deleteComment" method="POST">
-                <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
-                <input type=submit value="Remove Comment">
-            </form>
-            {% endif %}
+            <div>
+                <strong>{% if comment.user %}{{comment.user.username}}{% else %}unkown{% endif %}</strong>
+                {% if site_access >= 1 %}
+                <form action="{{route}}/deleteComment" method="POST">
+                    <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
+                    <input class='delete' type=submit value="Remove Comment">
+                </form>
+                {% endif %}
+                <span>{{format_time_delta(current_time-comment.get_time_commented())}}</span>
+            </div>
+            <p>{{comment.text}}</p>
         </div>
         {% endfor %}
         {% if comments|length == 0 %}
@@ -167,9 +171,20 @@
         {% endif %}
     </div>
     
-    {% if access_level >= access_from_string["CAN_EDIT"] %}
+    {% if access_level >= access_from_string["SUB_OWNER"] %}
     <div class="popup" id="sharing">
+    <div>
+        <button class='cancel' onclick = "hide('sharing')">X</button>
         <h3>Sharing</h3>
+        <h4>Basic</h4>
+        <form action='{{route}}/simpleShare' method="POST">
+            <select name='setting'>
+                <option value='private'>Private</option>
+                <option value='class'>Class View</option>
+                <option value='public'>Public</option>
+            </select>
+            <input type='submit' value='Share'>
+        </form>
         <h4>Link Sharing</h4>
         {% for share_link in share_links %}
             <p>{{url_for("invite",project_id_string=project.project_id, invite_string=share_link.url_string)}} grants: {{access_descriptions[share_link.access_level_granted]}}</p>
@@ -194,19 +209,45 @@
             <input type="submit" value="Create Link">
         </form>
         <h4>Specific User Sharing</h4>
-        <form method="POST" action="{{route}}/permission">
+        {% for user, user_access_level in access_pairs %}
+        <div class='user_access'>
+            <span><strong>{{user.username}}</strong> - {{access_descriptions[user_access_level]}}</span>
+            {% if access_level > user_access_level %}
+            <form method="POST" action="{{route}}/access">
+                <div class='hidden' id='{{user.username}}-change-form'>
+                    <input type='hidden' name='username' value='{{user.username}}'>
+                    <select name="access_level" required>
+                        {% for access_string in ["CAN_VIEW","CAN_COMMENT","CAN_EDIT","SUB_OWNER"] %}
+                            {% if access_level > access_from_string[access_string] %}
+                            <option value='{{access_string}}'>{{access_descriptions[access_from_string[access_string]]}}</option>
+                            {% endif %}
+                        {% endfor %}
+                    </select>
+                    <button type='button' onclick='show("{{user.username}}-change-button");hide("{{user.username}}-change-form")' class='cancel'>Cancel</button>
+                    <input type='submit' value='Change'>
+                </div>
+                <div id='{{user.username}}-change-button'>
+                    <button type='button' onclick='show("{{user.username}}-change-form");hide("{{user.username}}-change-button")'>Change Access</button>
+                    <input formaction='{{route}}/deleteAccess' type='submit' value='Delete' class='delete'></p>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <form method="POST" action="{{route}}/access">
             Username: <input type="text" name="username">
             Access Level: <select name="access_level" required>
-                <option value="NO_ACCESS">Invisible</option>
-                <option value="CAN_VIEW" selected>Can View</option>
-                <option value="CAN_COMMENT">Can Comment</option>
-                <option value="CAN_EDIT">Collaborator</option>
-                <option value="SUB_OWNER">Sub-Owner</option>
+                {% for access_string in ["CAN_VIEW","CAN_COMMENT","CAN_EDIT","SUB_OWNER"] %}
+                    {% if access_level > access_from_string[access_string] %}
+                    <option value='{{access_string}}'>{{access_descriptions[access_from_string[access_string]]}}</option>
+                    {% endif %}
+                {% endfor %}
             </select><br>
-            <input type="submit" value="Change User Access">
+            <input type="submit" value="New User">
         </form>
-        <h4>Default Access</h4>
-        <form method="POST" action="{{route}}/defaultPermission">
+        <!--<h4>Default Access</h4>
+        <form method="POST" action="{{route}}/defaultAccess">
             Currently {{access_descriptions[project.default_access]}}.<br>
             Access Level: <select name="default_access" required>
                 <option value="NO_ACCESS">Invisible</option>
@@ -216,8 +257,9 @@
                 <option value="SUB_OWNER">Sub-Owner</option>
             </select><br>
             <input type="submit" value="Change Default Access">
-        </form>
+        </form>-->
         <button class='cancel' onclick = "hide('sharing')">Cancel</button>
+    </div>
     </div>
     <button onclick="show('sharing')">Edit Sharing</button>
     {% endif %}

@@ -15,7 +15,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 
 #Own imports:
-from permission_names import *
+from access_names import *
 from constants import *
 
 
@@ -71,16 +71,16 @@ class Projects(db.Model):
     def assign_project_access(self, user_id, access_level):
         """Assigns or modifies access level of user given by user_id"""
         current_time = datetime.now(timezone.utc)
-        existing_permission = ProjectPermissions.query.filter_by(project_id=self.project_id, user_id=user_id).first()
-        if existing_permission is None:
-            new_permission = ProjectPermissions(project_id=self.project_id,
+        existing_access = ProjectPermissions.query.filter_by(project_id=self.project_id, user_id=user_id).first()
+        if existing_access is None:
+            new_access = ProjectPermissions(project_id=self.project_id,
                                                 user_id=user_id,
                                                 access_level=access_level,
                                                 time_assigned=current_time)
-            db.session.add(new_permission)
-        elif existing_permission.access_level != access_level:
-            existing_permission.access_level = access_level
-            existing_permission.time_assigned = current_time
+            db.session.add(new_access)
+        elif existing_access.access_level != access_level:
+            existing_access.access_level = access_level
+            existing_access.time_assigned = current_time
         self.update_time()  
         db.session.commit()
     
@@ -104,16 +104,16 @@ class Projects(db.Model):
             return self.default_access
         if user.site_access == ADMIN:
             return OWNER
-        project_permission = ProjectPermissions.query.filter_by(project_id=self.project_id,
+        project_access = ProjectPermissions.query.filter_by(project_id=self.project_id,
                                                                 user_id=user.user_id).first()
-        if project_permission is None:
+        if project_access is None:
             return max(self.student_access, self.default_access)
-        return max(self.student_access,self.default_access,project_permission.access_level)
+        return max(self.student_access,self.default_access,project_access.access_level)
     
-    def user_permission_pairs(self):
-        """Returns list of tuples (user object, permission_level) sorted by permission level decreasing,
+    def user_access_pairs(self):
+        """Returns list of tuples (user object, access_level) sorted by access level decreasing,
         then by username lexographically."""
-        return sorted([(permission.user,permission.access_level) for permission in self.user_permissions],key=lambda x: (-x[1],x[0].username))
+        return sorted([(access.user,access.access_level) for access in self.user_permissions],key=lambda x: (-x[1],x[0].username))
     
     def update_time(self):
         """Updates last edit time of project."""

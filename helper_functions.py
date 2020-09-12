@@ -10,7 +10,7 @@ from secrets import choice
 from datetime import datetime, timedelta
 
 #Own imports:
-from permission_names import *
+from access_names import *
 from constants import *
 from tables import *
 
@@ -30,13 +30,13 @@ def create_project(name,
                            student_access=student_access)
     db.session.add(new_project)
     db.session.commit()
-    owner_permission_level = ProjectPermissions(user_id=owner_id,
+    owner_access_level = ProjectPermissionss(user_id=owner_id,
                                                 project_id=new_project.project_id,
                                                 access_level=OWNER,
                                                 time_assigned=current_time)
     project_folder = os.path.join(PROJECTS_FOLDER,str(new_project.project_id))
     os.mkdir(project_folder)
-    db.session.add(owner_permission_level)
+    db.session.add(owner_access_level)
     db.session.commit()
     return new_project
 
@@ -173,7 +173,7 @@ def format_time_delta(time_delta):
         return f"{days} day{'s' if days!=1 else ''} ago"
     elif time_delta.seconds>=3600:
         hours = time_delta.seconds//3600
-        return f"{hours} hours{'s' if hours!=1 else ''} ago"
+        return f"{hours} hour{'s' if hours!=1 else ''} ago"
     elif time_delta.seconds>=60:
         minutes = time_delta.seconds//60
         return f"{minutes} minute{'s' if minutes!=1 else ''} ago"
