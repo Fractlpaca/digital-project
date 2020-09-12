@@ -120,8 +120,7 @@ def newProject():
     if request.method == "POST":
         name = request.form.get("name","Untitled Project")
         owner_id = current_user.user_id
-        new_project = create_project(name=name,
-                                     owner_id=owner_id)
+        new_project = create_project(name,owner_id)
         return redirect("/project/{}".format(new_project.project_id))
     return render_template("newProject.html")
 
@@ -137,31 +136,36 @@ def project(project_id_string):
     permission_pair_names = [(user.username, access_descriptions[permission]) for user, permission in permission_pairs]
     print(permission_pair_names, flush=True)
     download_info = list(get_download_info(project.project_id))
-    current_time=datetime.now(timezone.utc)
+    current_time=datetime.now(TIMEZONE)
     download_info.sort(key=lambda x:(current_time-x[2],x[0],x[1]))
     download_info =[(filename, username, format_time_delta(datetime.now(timezone.utc)-time)) for filename, username, time in download_info]
     share_links = ShareLinks.query.filter(ShareLinks.project_id==project.project_id, ShareLinks.access_level_granted<=access_level)
     print(project.comments, flush=True)
-    template_args = {
-                     "project": project,
-                     "is_logged_in": is_logged_in,
-                     "user": (current_user if is_logged_in else None),
-                     "site_access": (current_user.site_access if is_logged_in else 0),
-                     "access_level": access_level,
-                     "route": route,
-                     "authors": project.authors.replace(",",", "),
-                     "tags_list": project.tags.split(","),
-                     "tags": project.tags.replace(",", ", "),
-                     "description": project.get_description(),
-                     "download_info": download_info,
-                     "share_links": share_links,
-                     "comments": project.comments,
-                     "access_from_string": access_from_string,
-                     "access_descriptions": access_descriptions
+    base_template_args = {
+        "is_logged_in": is_logged_in,
+        "user": (current_user if is_logged_in else None),
+        "site_access": (current_user.site_access if is_logged_in else 0),
+        "current_time": current_time,
+        "format_time_delta": format_time_delta
+    }
+    project_template_args={
+        "project": project,
+        "access_level": access_level,
+        "route": route,
+        "authors": project.authors.replace(",",", "),
+        "tags_list": project.tags.split(","),
+        "tags": project.tags.replace(",", ", "),
+        "description": project.get_description(),
+        "download_info": download_info,
+        "share_links": share_links,
+        "comments": project.comments,
+        "access_from_string": access_from_string,
+        "access_descriptions": access_descriptions
     }
     content_type=project.content_type
     return render_template("content/game.html",
-                           **template_args)
+                           **base_template_args,
+                           **project_template_args)
 
 @app.route("/project/<project_id_string>/thumbnail")
 def thumbnail(project_id_string):
@@ -179,8 +183,8 @@ def webGL(project_id_string):
     if project is None:
         abort(404)
     #print("WEBGL"+project_id_string,flush=True)
-    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
-    #return "Temporarily disabled"
+    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    return "Temporarily disabled"
 
 @app.route("/project/<project_id_string>/<folder>/<path:path>",methods=["GET"])
 def gamedata(project_id_string, folder, path):
@@ -441,7 +445,7 @@ def comment(project_id_string):
     route = f"/project/{project.project_id}"
     
     new_comment_text = request.form.get("text", None)
-    current_time = datetime.now(timezone.utc)
+    current_time = datetime.now(TIMEZONE)
     if new_comment_text is not None:
         new_comment = Comments(project_id=project.project_id,
                                user_id=current_user.user_id if is_logged_in else None,

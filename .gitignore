@@ -1,2 +1,7 @@
 #Ignore any secret keys
 *.dat
+#Ignore the database
+*.db
+#Ignore project and class files
+/projects/*
+/classes/*

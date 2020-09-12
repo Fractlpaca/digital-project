@@ -42,9 +42,9 @@
     </header>
     {% endblock %}
 	
-	<main id='main'>
-	{% block main %}
-	{% endblock %}
+	<main class='{% block main_class %}{% endblock %}'>
+        {% block main %}
+        {% endblock %}
 	</main>
 	
 	{% block footer %}

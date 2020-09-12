@@ -125,7 +125,7 @@ class Projects(db.Model):
         project_dir = os.path.join(PROJECTS_FOLDER,str(self.project_id))
         description_file = os.path.join(project_dir,"description.txt")
         if not os.path.exists(description_file):
-            return None
+            return ""
         else:
             file = open(description_file, "r")
             text = file.read()
@@ -171,6 +171,9 @@ class Comments(db.Model):
     user_id = Column(Integer, ForeignKey("users.user_id"))
     time_commented = Column(DateTime)
     text = Column(Text)
+
+    def get_time_commented(self):
+        return self.time_commented.replace(tzinfo=TIMEZONE)
     
     project = relationship("Projects", back_populates="comments")
     user = relationship("Users", back_populates="comments")

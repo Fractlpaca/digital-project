@@ -2,6 +2,8 @@
 
 {% block title %}{{project.name}}{% endblock %}
 
+
+{% block main_class %}project{% endblock %}
 {% block main %}
     <div class="titlebar">
         <div class='centered'>
@@ -141,21 +143,24 @@
     
     <div class="comments">
         {% if access_level >= access_from_string["CAN_COMMENT"] %}
-        <form action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
+        <form id='comment' action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
             <textarea name="text" rows=3></textarea>
-            <input type='submit' value='Post'>
+            <div class='comment_options'>
+                <input type='submit' value='Post'>
+            </div>
         </form>
         {% endif %}
         {% for comment in comments %}
-        <strong>{{comment.user.username}}</strong> at {{comment.time_commented}}.<br>
-        <span>{{comment.text}}</span>
-        {% if site_access >= 1 %}
-        <form action="{{route}}/deleteComment" method="POST">
-            <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
-            <input type=submit value="Remove Comment">
-        </form>
-        {% endif %}
-        <br>
+        <div class='comment'>
+            <strong>{{comment.user.username}}</strong> {{format_time_delta(current_time-comment.get_time_commented())}}.<br>
+            <span>{{comment.text}}</span>
+            {% if site_access >= 1 %}
+            <form action="{{route}}/deleteComment" method="POST">
+                <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
+                <input type=submit value="Remove Comment">
+            </form>
+            {% endif %}
+        </div>
         {% endfor %}
         {% if comments|length == 0 %}
             <span>No Comments</span>

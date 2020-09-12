@@ -131,7 +131,7 @@ input[type='submit']{
     display: block;
 }
 
-.project_links{S
+.project_links{
 }
 
 .project_links a{
@@ -148,7 +148,13 @@ input[type='submit']{
     margin: 2px;
 }
 
-main{
+main.project{
+    margin: auto;
+    width: 98%;
+}
+
+main.index{
+    background-color: #eee;
     margin: auto;
     width: 98%;
 }
@@ -157,6 +163,10 @@ main{
     position: relative;
     margin: 5px 0px;
     background-color: #bbb;
+}
+
+textarea{
+    resize: vertical;
 }
 
 .left{
@@ -221,12 +231,35 @@ img.content{
 
 .comments{
     padding: 5px;
-    margin: 5px 0px;
+    margin: 5px auto;
+    width: 66%;
     background-color: #2aad3a;
+    position: relative;
 }
 
+.comment_options{
+    position: relative;
+    height: 20px;
+}
+
+#comment{
+    background-color: white;
+}
+
+#comment input[type='submit']{
+    position: absolute;
+    right: 0px;
+}
+
+.comment{
+    background-color: #bbbbbb;
+    margin: 2px;
+    padding: 2px;
+}
+
+
 textarea{
-    width: 100%;
+    width: calc(100% - 5px);
 }
 
 .popup{
