@@ -49,9 +49,8 @@ def user_loader(user_id):
 class Projects(db.Model):
     __tablename__ = "projects"
     project_id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50))
     owner_id = Column(Integer, ForeignKey("users.user_id"), nullable = False)
-    owner = relationship("Users", back_populates="projects_owned")
+    name = Column(String(50))
     default_access = Column(Integer, default=PROJECT_DEFAULT_ACCESS)
     student_access = Column(Integer, default=PROJECT_STUDENT_ACCESS)
     time_created = Column(DateTime)
@@ -63,6 +62,7 @@ class Projects(db.Model):
     user_permissions = relationship("ProjectPermissions", back_populates="project")
     share_links = relationship("ShareLinks", back_populates="project")
     comments = relationship("Comments", back_populates="project")
+    owner = relationship("Users", back_populates="projects_owned")
     
     def route(self): return f"/project/{self.project_id}"
     def folder(self): return f"projects/{self.project_id}"

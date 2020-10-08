@@ -1,5 +1,5 @@
 body{
-    background-color: #2aad3a;
+    background-color: #5a5a5a;
     padding: 0px;
     margin: 0px;
 }
@@ -10,7 +10,9 @@ header{
     height: 66px;
     padding: 2px;
     margin: auto;
-    width: 98%;
+    margin-bottom: 10px;
+    width: calc(100%-4px);
+    background-color: #2aad3a;
 }
 
 header img{
@@ -68,7 +70,7 @@ nav{
 
 #loginout{
     position: absolute;
-    right: 2px;
+    right: 10px;
 }
 
 
@@ -237,8 +239,8 @@ img.content{
 
 .comments{
     padding: 5px;
-    margin: 5px auto;
-    width: 66%;
+    margin: 5px 0px;
+    width: 82%;
     background-color: #2aad3a;
     position: relative;
 }
@@ -320,7 +322,8 @@ textarea{
 
 footer{
     width: 100%;
-    background-color: #155d1e;
+    background-color: #131313;
+    color: #eee;
     overflow: overlay;
 }
 
@@ -351,7 +354,7 @@ div.user_access{
     margin-right: 20px;
 }
 
-button, input[tyoe='submit']{
+button, input[type='submit']{
     border-radius: 4px;
 }
 
