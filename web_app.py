@@ -22,6 +22,10 @@ from helper_functions import *
 
 @app.route("/")
 def index():
+    """
+    Home route.
+    Restrictions: None
+    """
     is_logged_in = current_user.is_authenticated
     user = current_user if is_logged_in else None
     public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).all()
@@ -34,6 +38,10 @@ def index():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    """
+    Route to register an account.
+    Restrictions: None
+    """
     if request.form:
         username = request.form.get("username")
         if Users.query.filter_by(username=username).first() is not None:
@@ -57,6 +65,10 @@ def register():
 
 @app.route("/login", methods = ["GET", "POST"])
 def login():
+    """
+    Route to login.
+    Restrictions: None
+    """
     logout_user()
     if request.form:
         username = request.form.get("username")
@@ -76,9 +88,15 @@ def login():
     return render_template("login.html", is_logged_in=False)    
 
 
+login_manager.login_view = "login"
+
 
 @app.route("/logout")
 def logout():
+    """
+    Route to logout user.
+    Restrictions: None.
+    """
     logout_user()
     return redirect("/")
 
@@ -87,6 +105,11 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    """
+    User's dashboard.
+    Displays projects owned by them and shared with them.
+    Restrictions: Authenticated
+    """
     user_id = current_user.get_id()
     projects_owned = current_user.projects_owned
     projects_shared = ProjectPermissions.query.filter(ProjectPermissions.user_id==user_id, CAN_VIEW <= ProjectPermissions.access_level, ProjectPermissions.access_level< OWNER).all()
@@ -103,6 +126,11 @@ def dashboard():
 
 @app.route("/search")
 def search():
+    """
+    Route for search querys.
+    Displays list of projects partially matching the query.
+    Restrictions: None
+    """
     is_logged_in = current_user.is_authenticated
     user = current_user if is_logged_in else None
     search_text = request.args.get("search","").strip().lower()
@@ -124,6 +152,10 @@ def search():
 @app.route("/newProject", methods=["GET", "POST"])
 @login_required
 def newProject():
+    """
+    Form submission creates new project and redirects user to the project page.
+    Restrictions: Authenticated
+    """
     if request.method == "POST":
         name = request.form.get("name","Untitled Project")
         owner_id = current_user.user_id
@@ -135,13 +167,19 @@ def newProject():
 
 @app.route("/project/<project_id_string>", methods=["GET", "POST"])
 def project(project_id_string):
+    """
+    Route for a project.
+    Displays content of project as well as comments and metadata.
+    Users with appropiate access may edit the project though this page.
+    Restrictions: None (Some page content may be restricted by template)
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string,CAN_VIEW)
     if project is None:
         abort(404)    
     access_level_string = access_messages[access_level]
     route=f"/project/{project.project_id}"
     access_pairs = project.user_access_pairs()
-    download_info = list(get_download_info(project.project_id))
+    download_info = list(project.get_download_info())
     current_time=datetime.now(TIMEZONE)
     download_info.sort(key=lambda x:(current_time-x[2],x[0],x[1]))
     download_info =[(filename, username, format_time_delta(datetime.now(timezone.utc)-time)) for filename, username, time in download_info]
@@ -175,8 +213,29 @@ def project(project_id_string):
 
 
 
+@app.route("/project/<project_id_string>/thumbnail")
+def thumbnail(project_id_string):
+    """
+    Returns the project's thumbnail, or the default if it does not exist.
+    Restrictions: CAN_VIEW
+    """
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
+    if project is None:
+        abort(404)
+    for extension in THUMBNAIL_EXTENSIONS:
+        if os.path.exists(f"projects/{project.project_id}/thumbnail.{extension}"):
+            return send_from_directory(f"projects/{project.project_id}", f"thumbnail.{extension}")
+    return send_from_directory(f"static/images","default_thumbnail.png")
+
+
+
 @app.route("/project/<project_id_string>/comment", methods=["POST"])
+@login_required
 def comment(project_id_string):
+    """
+    Form submission posts comment to project.
+    Restrictions: Authenticated, CAN_COMMENT
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_COMMENT)
     if project is None:
         abort(404)
@@ -199,9 +258,13 @@ def comment(project_id_string):
 @app.route("/project/<project_id_string>/deleteComment",methods=["POST"])
 @login_required
 def deleteComment(project_id_string):
-    if current_user.site_access < 1:
+    """
+    Form submission deletes comment.
+    Restictions: Authenticated, Site Access: MOD
+    """
+    if current_user.site_access < MOD:
         abort(403)    
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, NO_ACCESS)
     if project is None:
         abort(404)
     try:
@@ -217,7 +280,12 @@ def deleteComment(project_id_string):
 
 
 @app.route("/project/<project_id_string>/upload", methods=["POST"])
+@login_required
 def upload(project_id_string):
+    """
+    Route for uploading downloadable files or playable content.
+    Restrictions: Authenticated, CAN_EDIT
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
     if project is None:
         abort(404)
@@ -247,18 +315,22 @@ def upload(project_id_string):
 
             filename = request.form.get("filename", None)
             filename = secure_filename(filename or file.filename) 
-            filename = unique_download_filename(project.project_id, filename)
+            filename = project.unique_download_filename(filename)
             
             file_path = os.path.join(download_folder, filename)
             file.save(file_path)
             download_data = (filename, current_user.username, datetime.now(timezone.utc))
-            set_download_name(project.project_id, download_data)
+            project.set_download_name(download_data)
     return redirect(route)
 
 
 
 @app.route("/project/<project_id_string>/webgl",methods=["GET"])
 def webGL(project_id_string):
+    """
+    Returns a send_from_directory of the webgl content ('index.html' file).
+    Restrictions: CAN_VIEW
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
@@ -269,6 +341,10 @@ def webGL(project_id_string):
 
 @app.route("/project/<project_id_string>/<folder>/<path:path>",methods=["GET"])
 def gamedata(project_id_string, folder, path):
+    """
+    Route to serve WebGL content. Returns requested files from within webgl folder.
+    Restrictions: CAN_VIEW
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
@@ -287,12 +363,16 @@ def gamedata(project_id_string, folder, path):
 
 @app.route("/project/<project_id_string>/download",methods=["GET","POST"])
 def download(project_id_string):
+    """
+    Route to download requested file from the project's downloads folder.
+    Restrictions: CAN_VIEW
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
     project_dir = os.path.join(PROJECTS_FOLDER, str(project.project_id))    
     download_folder = os.path.join(PROJECTS_FOLDER,"downloads")
-    download = get_download(project.project_id, request.form.get("filename",""))
+    download = project.get_download(request.form.get("filename",""))
     if download is None:
         return redirect(f"/project/{project.project_id}")
     else:
@@ -301,18 +381,28 @@ def download(project_id_string):
 
 
 @app.route("/project/<project_id_string>/deleteDownload",methods=["POST"])
+@login_required
 def deleteDownload(project_id_string):
+    """
+    Route to delete requested file from the project's downloads folder.
+    Restrictions: Authenticated, CAN_EDIT
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
     if project is None:
         abort(404)
-    delete_download(project.project_id,request.form.get("filename",""))
+    project.delete_download(request.form.get("filename",""))
     return redirect(f"/project/{project.project_id}")
 
 
 
-@login_required
 @app.route("/project/<project_id_string>/access", methods=["POST"])
+@login_required
 def projectAccess(project_id_string):
+    """
+    Submission of form sets a specific user's access for the project,
+    provided the existing access and requested access does not exceed SUB_OWNER.
+    Restrictions: Authenticated, SUB_OWNER
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404) 
@@ -335,9 +425,13 @@ def projectAccess(project_id_string):
 
 
 
-@login_required
 @app.route("/project/<project_id_string>/deleteAccess", methods=["POST"])
+@login_required
 def deleteProjectAccess(project_id_string):
+    """
+    Route for deleting requested specific user access.
+    Restrictions: Authenticated, SUB_OWNER
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404) 
@@ -357,23 +451,13 @@ def deleteProjectAccess(project_id_string):
 
 
 
-@app.route("/project/<project_id_string>/defaultAccess", methods=["POST"])
-def defaultProjectPermissions(project_id_string):
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
-    if project is None:
-        abort(404)
-    default_access=access_from_string.get(request.form.get("default_access",None),project.default_access)
-    if default_access <= access_level:
-        project.default_access=default_access
-    project.update_time()
-    db.session.commit()
-    return redirect(f"/project/{project.project_id}")
-
-
-
 @app.route("/project/<project_id_string>/createShareLink", methods=["POST"])
 @login_required
 def create_share_link(project_id_string):
+    """
+    Form submission creates a sharable link.
+    Restrictions: Authenticated, SUB_OWNER.
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)
@@ -424,6 +508,11 @@ def create_share_link(project_id_string):
 @app.route("/project/<project_id_string>/invite/<invite_string>")
 @login_required
 def invite(project_id_string, invite_string):
+    """
+    A valid invite string will grant the current user an access to a project,
+    then redirect them to that project.
+    Restrictions: Authenticated
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, NO_ACCESS)
     if project is None:
         abort(404)
@@ -448,7 +537,12 @@ def invite(project_id_string, invite_string):
 
 
 @app.route("/project/<project_id_string>/simpleShare",methods=["POST"])
+@login_required
 def simpleShare(project_id_string):
+    """
+    Configures project default access levels to a preset.
+    Restrictions: Authenticated
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)
@@ -471,6 +565,10 @@ def simpleShare(project_id_string):
 @app.route("/project/<project_id_string>/edit", methods=["GET","POST"])
 @login_required
 def editProject(project_id_string):
+    """
+    Route for editing title, tags, authors, description, and thumbnail of project.
+    Restrictions: Authenticated, SUB_OWNER
+    """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)    
@@ -492,77 +590,28 @@ def editProject(project_id_string):
         if tags != "":
             project.set_tags(tags)
         
-        file = request.files.get("thumbnail")
+        thumbnail_file = request.files.get("thumbnail")
         thumbnail_path = os.path.join(PROJECTS_FOLDER,str(project.project_id))
         thumbnail_path = os.path.join(thumbnail_path, "thumbnail")
-        if file is not None:
+        if thumbnail_file is not None:
             for extension in THUMBNAIL_EXTENSIONS:
-                if file.mimetype==f"image/{extension}":
-                    file.save(f"{thumbnail_path}.{extension}")
+                if thumbnail_file.mimetype==f"image/{extension}":
+                    thumbnail_file.save(f"{thumbnail_path}.{extension}")
         project.update_time()
          
     return redirect(f"/project/{project.project_id}")
 
 
 
-@app.route("/project/<project_id_string>/thumbnail")
-def thumbnail(project_id_string):
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
-    if project is None:
-        abort(404)
-    for extension in THUMBNAIL_EXTENSIONS:
-        if os.path.exists(f"projects/{project.project_id}/thumbnail.{extension}"):
-            return send_from_directory(f"projects/{project.project_id}", f"thumbnail.{extension}")
-    return send_from_directory(f"static/images","default_thumbnail.png")
-
-
-
-@app.route("/project/<project_id_string>/setAuthors", methods=["POST"])
-@login_required
-def setAuthors(project_id_str):
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
-    if project is None:
-        abort(404)    
-    author_names = request.form.get("names","")
-    project.setAuthors(author_names)
-    return redirect(f"/project/{project_id}")
-
-
-
-@app.route("/project/<project_id_string>/setTags", methods=["POST"])
-@login_required
-def setTags(project_id_string):
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
-    if project is None:
-        abort(404)    
-    author_names = request.form.get("tags","")
-    project.setTags(tags)
-    return redirect(f"/project/{project_id}")
-
-
-
-@app.route("/project/<project_id_string>/changeName", methods=["POST"])
-@login_required
-def changeName(project_id_string):
-    project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
-    if project is None:
-        abort(404)    
-    new_name = request.form.get("name","Untitled")
-    project.name = new_name
-    db.session.commit()
-    return redirect(f"/project/{project_id}")
-
-
 
 
 if __name__ == "__main__":
-    #if not os.path.exists(file_location(HASHKEY_FILENAME)):
-        ##Create password hash key
-        #generate_key(HASHKEY_FILENAME, 64)
     if not os.path.exists(file_location(SECRET_KEY_FILENAME)):
         #Create session secret key
         generate_key(SECRET_KEY_FILENAME, 24)
     app.secret_key = get_key(SECRET_KEY_FILENAME)
     if not os.path.exists(file_location(database_file)):
         db.create_all()
+    
+
     app.run(debug=True)

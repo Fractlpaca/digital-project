@@ -62,95 +62,21 @@ def handle_project_id_string(project_id_string, threshold_access=CAN_VIEW):
             abort(404)
             #To prevent knoledge of existence of project
         return (project, access_level, is_logged_in)
-
-
-def set_download_name(project_id, download_info):
-    """Takes  download_info 3-tuple, writes to download info file"""
-    filename, username, time = download_info
-    time = datetime.strftime(time, TIME_FORMAT)
-    project_folder = os.path.join(PROJECTS_FOLDER, str(project_id))
-    log_name = os.path.join(project_folder, "downloads.txt")
-    try:
-        download_log = open(log_name, "a")
-    except:
-        return
-    download_log.write(f"{filename},{username},{time}\r\n")
-
-def get_download_info(project_id):
-    """Returns set of 3-tuples, (filename, username, time)"""
-    project_folder = os.path.join(PROJECTS_FOLDER, str(project_id))
-    log_name = os.path.join(project_folder, "downloads.txt")
-    try:
-        download_log = open(log_name, "r")
-    except:
-        return set()
-    else:
-        log_text = download_log.readlines()
-        download_log.close()
-        file_list = set()
-        for entry in log_text:
-            try:
-                file_name, username, time = entry.strip().split(",")
-            except ValueError:
-                continue
-            else:
-                print(time, flush=True)
-                time = string_to_time(time)
-                file_list.add((file_name, username, time))
-        return file_list
-
-def unique_download_filename(project_id, filename):
-    new_filename = filename
-    existing_filenames = [line[0] for line in get_download_info(project_id)]
-    split_filename = filename.split(".")
-    first_name = split_filename[0]
-    extensions = ".".join(split_filename[1:])
-    counter = 0
-    while new_filename in existing_filenames:
-        new_filename = f"{first_name}({counter}).{extensions}"
-        counter+=1
-    return new_filename
-
-def delete_download(project_id, filename):
-    project_folder = os.path.join(PROJECTS_FOLDER, str(project_id))
-    download_folder = os.path.join(project_folder, "downloads")
-    file_path = os.path.join(download_folder, filename)
-    if not os.path.exists(file_path):
-        return
-    os.remove(file_path)
-    download_info=get_download_info(project_id)
-    for entry in download_info:
-        if entry[0]==filename:
-            download_info.remove(entry)
-            break
-    log_name = os.path.join(project_folder, "downloads.txt")
-    download_log = open(log_name, "w")
-    for entry in download_info:
-        try:
-            filename, username, time = entry
-        except ValueError:
-            continue
-        else:
-            download_log.write(f"{filename},{username},{time.strftime(TIME_FORMAT)}\r\n")
-    download_log.close()
     
 
-def get_download(project_id, filename):
-    project_folder = os.path.join(PROJECTS_FOLDER, str(project_id))
-    download_folder = os.path.join(project_folder, "downloads")
-    file_path = os.path.join(download_folder, filename)
-    if not os.path.exists(file_path):
-        return None
-    return send_from_directory(download_folder, filename, as_attachment=True)
 
 def get_current_time():
     """Returns the current time as an offset-aware datetime object in UTC"""
     return datetime.now(TIMEZONE)
 
+
+
 def time_to_string(datetime_object):
     """Returns the datetime object formatted to TIME_FORMAT in timezone TIMEZONE"""
     datetime_utc = datetime_object.astimezone(TIMEZONE)
     return datetime_utc.strftime(TIME_FORMAT)
+
+
 
 def string_to_time(datetime_string):
     """
@@ -161,7 +87,13 @@ def string_to_time(datetime_string):
     time = time.replace(tzinfo, TIMEZONE)
     return time
 
+
+
 def format_time_delta(time_delta):
+    """
+    Returns a string representing the given time_delta.
+    String is formatted as '{x} {unit}('s) ago' or 'Less than a minute ago'.
+    """
     if time_delta.days>=365:
         years = time_delta.days//365.2422
         return f"{years} year{'s' if years!=1 else ''} ago"
@@ -180,17 +112,29 @@ def format_time_delta(time_delta):
     else:
         return "Less than a minute ago"
 
+
+
 def file_location(path):
     return os.path.join(APP_DIR, path)
 
 
+
 def generate_key(filename, size):
+    """
+    Generates a random key consisting of 'size' random bytes,
+    and writes to the file.
+    """
     file = open(filename,"wb")
     print(os.urandom(size))
     file.write(os.urandom(size))
     file.close()
-    
+
+
+
 def get_key(filename):
+    """
+    Reads and returns a key from a file as binary data.
+    """
     file = open(filename,"rb")
     key = file.read()
     file.close()
