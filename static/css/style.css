@@ -73,6 +73,12 @@ nav{
     right: 10px;
 }
 
+#loginout img{
+    float: right;
+    height: 40px;
+    border-radius: 20px;
+    margin: 5px 0px 0px 10px;
+}
 
 button{
     background-color: #32c33d;
@@ -137,8 +143,6 @@ input[type='submit']{
     display: block;
 }
 
-.project_links{
-}
 
 .project_links a{
     color: black;
@@ -272,7 +276,19 @@ img.content{
 }
 
 .comment div{
-    height: 23px;
+    height: 34px;
+}
+
+.comment div strong{
+    position: relative;
+    top: 10px;
+}
+
+.comment img{
+    float: left;
+    height: 32px;
+    border-radius: 16px;
+    margin: 1px 5px 0px 1px;
 }
 
 .comment span{

@@ -9,6 +9,8 @@ import os
 from secrets import choice
 from datetime import datetime, timedelta
 
+import requests
+
 #Own imports:
 from access_names import *
 from constants import *
@@ -30,7 +32,7 @@ def create_project(name,
                            student_access=student_access)
     db.session.add(new_project)
     db.session.commit()
-    owner_access_level = ProjectPermissionss(user_id=owner_id,
+    owner_access_level = ProjectPermissions(user_id=owner_id,
                                                 project_id=new_project.project_id,
                                                 access_level=OWNER,
                                                 time_assigned=current_time)
@@ -139,3 +141,8 @@ def get_key(filename):
     key = file.read()
     file.close()
     return key
+
+
+
+def get_google_provider_cfg():
+    return requests.get(GOOGLE_DISCOVERY_URL).json()

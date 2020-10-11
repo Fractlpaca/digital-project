@@ -13,3 +13,10 @@ TIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f %Z"
 TIMEZONE = timezone.utc
 
 THUMBNAIL_EXTENSIONS = ["png","jpeg","jpg","gif"]
+
+ALLOWED_EMAIL_DOMAINS = ["burnside.school.nz"]
+
+#Google Login id and secret
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+GOOGLE_DISCOVERY_URL = ("https://accounts.google.com/.well-known/openid-configuration")

@@ -13,12 +13,20 @@ from passlib.hash import bcrypt
 from werkzeug.utils import secure_filename
 from datetime import datetime, timezone, timedelta
 
+#Imports for Google Login
+from oauthlib.oauth2 import WebApplicationClient
+import requests
+import json
+
+
 #Own imports:
 from access_names import *
 from constants import *
 from tables import *
 from helper_functions import *
 
+
+client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
 @app.route("/")
 def index():
@@ -36,59 +44,96 @@ def index():
 
 
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    """
-    Route to register an account.
-    Restrictions: None
-    """
-    if request.form:
-        username = request.form.get("username")
-        if Users.query.filter_by(username=username).first() is not None:
-            #Username already exists
-            print("Error 1", flush=True)
-        else:
-            password_plaintext = request.form.get("password")
-            password_hash = bcrypt.hash(password_plaintext, rounds=BCRYPT_ROUNDS)
-            new_user = Users(username=request.form.get("username"),
-                             password_hash=password_hash)
-            db.session.add(new_user)
-            db.session.commit()
-            logout_user()
-            login_user(new_user)
-            return redirect(url_for("dashboard"))
-    is_logged_in = current_user.is_authenticated
-    username = current_user.username if is_logged_in else None
-    return render_template("register.html", is_logged_in=is_logged_in, username=username)
-
-
-
-@app.route("/login", methods = ["GET", "POST"])
+@app.route("/login")
 def login():
     """
-    Route to login.
+    Redirect user to google login.
+    Code taken from article: 'https://realpython.com/flask-google-login/'.
     Restrictions: None
     """
-    logout_user()
-    if request.form:
-        username = request.form.get("username")
-        user = Users.query.filter_by(username=username).first()
-        password_plaintext = request.form.get("password")
-        if Users.query.filter_by(username=username).first() is None:
-            #User does not exist
-            print("Error 2", flush=True)
-        else:
-            if bcrypt.verify(password_plaintext,user.password_hash):
-                login_user(user)
-                return redirect(url_for("dashboard"))
-            else:
-                #Wrong password
-                print("Error 3", flush=True)
-                #Error 2 and 3 must be presented as the same error for security reasons.
-    return render_template("login.html", is_logged_in=False)    
+    # Find out what URL to hit for Google login
+    google_provider_cfg = get_google_provider_cfg()
+    authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
+    # Use library to construct the request for Google login and provide
+    # scopes that let you retrieve user's profile from Google
+    request_uri = client.prepare_request_uri(
+        authorization_endpoint,
+        redirect_uri=request.base_url + "/callback",
+        scope=["openid", "email", "profile"],
+    )
+    return redirect(request_uri)
 
 login_manager.login_view = "login"
+
+
+
+@app.route("/login/callback")
+def login_callback():
+    """
+    Log user in once they are verified by google.
+    Code taken from 'https://realpython.com/flask-google-login/'
+    """
+    # Get authorization code Google sent back to you
+    code = request.args.get("code")
+    # Find out what URL to hit to get tokens that allow you to ask for
+    # things on behalf of a user
+    google_provider_cfg = get_google_provider_cfg()
+    token_endpoint = google_provider_cfg["token_endpoint"]
+    # Prepare and send a request to get tokens! Yay tokens!
+    token_url, headers, body = client.prepare_token_request(
+        token_endpoint,
+        authorization_response=request.url,
+        redirect_url=request.base_url,
+        code=code
+    )
+    token_response = requests.post(
+        token_url,
+        headers=headers,
+        data=body,
+        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
+    )
+
+    # Parse the tokens!
+    client.parse_request_body_response(json.dumps(token_response.json()))
+    # Now that you have tokens (yay) let's find and hit the URL
+    # from Google that gives you the user's profile information,
+    # including their Google profile image and email
+    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
+    uri, headers, body = client.add_token(userinfo_endpoint)
+    userinfo_response = requests.get(uri, headers=headers, data=body)
+    # You want to make sure their email is verified.
+    # The user authenticated with Google, authorized your
+    # app, and now you've verified their email through Google!
+    if userinfo_response.json().get("email_verified"):
+        unique_id = userinfo_response.json()["sub"]
+        users_email = userinfo_response.json()["email"]
+        #if users_email.split("@")[1] not in ALLOWED_EMAIL_DOMAINS:
+        #    return "Account not allowed.", 400
+        picture = userinfo_response.json()["picture"]
+        users_name = userinfo_response.json()["name"]
+        print(userinfo_response.json(),flush=True)
+    else:
+        return "User email not available or not verified by Google.", 400
+
+    #Own code follows:
+
+    #Check if user exists:
+    user = Users.query.filter_by(user_id=unique_id).first()
+    
+    if user is None:
+        #Create user
+        user = Users(user_id=unique_id,
+                    name=users_name,
+                    email=users_email,
+                    profile_pic_url=picture)
+        db.session.add(user)
+        db.session.commit()
+    
+    #Log user in
+
+    login_user(user, remember=True)
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/logout")
@@ -182,7 +227,7 @@ def project(project_id_string):
     download_info = list(project.get_download_info())
     current_time=datetime.now(TIMEZONE)
     download_info.sort(key=lambda x:(current_time-x[2],x[0],x[1]))
-    download_info =[(filename, username, format_time_delta(datetime.now(timezone.utc)-time)) for filename, username, time in download_info]
+    download_info =[(filename, name, format_time_delta(datetime.now(timezone.utc)-time)) for filename, name, time in download_info]
     share_links = ShareLinks.query.filter(ShareLinks.project_id==project.project_id, ShareLinks.access_level_granted<=access_level)
     base_template_args = {
         "is_logged_in": is_logged_in,
@@ -319,7 +364,7 @@ def upload(project_id_string):
             
             file_path = os.path.join(download_folder, filename)
             file.save(file_path)
-            download_data = (filename, current_user.username, datetime.now(timezone.utc))
+            download_data = (filename, current_user.name, datetime.now(timezone.utc))
             project.set_download_name(download_data)
     return redirect(route)
 
@@ -408,9 +453,9 @@ def projectAccess(project_id_string):
         abort(404) 
     route = f"/project/{project.project_id}"
     if request.form:
-        added_username = request.form.get("username", None)
-        if added_username is not None:
-            added_user = Users.query.filter_by(username=added_username).first()
+        added_email = request.form.get("email", None)
+        if added_email is not None:
+            added_user = Users.query.filter_by(email=added_email).first()
             if added_user is not None:
                 existing_access = project.access_level(added_user)
                 if existing_access >= access_level:
@@ -437,9 +482,9 @@ def deleteProjectAccess(project_id_string):
         abort(404) 
     route = f"/project/{project.project_id}"
     if request.form:
-        added_username = request.form.get("username", None)
-        if added_username is not None:
-            added_user = Users.query.filter_by(username=added_username).first()
+        added_email = request.form.get("email", None)
+        if added_email is not None:
+            added_user = Users.query.filter_by(email=added_email).first()
             if added_user is not None:
                 existing_access = ProjectPermissions.query.filter_by(user_id=added_user.user_id,project_id=project.project_id).first()
                 if existing_access.access_level >= access_level:
@@ -614,4 +659,4 @@ if __name__ == "__main__":
         db.create_all()
     
 
-    app.run(debug=True)
+    app.run(ssl_context='adhoc', debug=True)

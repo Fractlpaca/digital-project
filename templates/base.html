@@ -32,11 +32,11 @@
         </div>
         <div id='loginout'>
             {% if is_logged_in %}
-            Logged in as <strong>{{user.username}}</strong>.<br>
+            Logged in as <strong>{{user.name}}</strong>. <img src='{{user.profile_pic_url}}'></img><br>
             <a href='{{url_for("logout")}}'>Logout</a>
             {% else %}
             Not logged in.<br>
-            <a href='{{url_for("login")}}'>Login</a> or <a href='{{url_for("register")}}'>Register</a>
+            <a href='{{url_for("login")}}'>Login</a>
             {% endif %}
         </div>
     </header>

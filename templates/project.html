@@ -154,7 +154,7 @@
         {% for comment in comments|reverse %}
         <div class='comment'>
             <div>
-                <strong>{% if comment.user %}{{comment.user.username}}{% else %}unkown{% endif %}</strong>
+                <img src='{{comment.user.profile_pic_url}}'></img><strong>{% if comment.user %}{{comment.user.name}}{% else %}unkown{% endif %}</strong>
                 {% if site_access >= 1 %}
                 <form action="{{route}}/deleteComment" method="POST">
                     <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
@@ -211,11 +211,11 @@
         <h4>Specific User Sharing</h4>
         {% for user, user_access_level in access_pairs %}
         <div class='user_access'>
-            <span><strong>{{user.username}}</strong> - {{access_descriptions[user_access_level]}}</span>
+            <span><strong>{{user.name}}</strong> - {{access_descriptions[user_access_level]}}</span>
             {% if access_level > user_access_level %}
             <form method="POST" action="{{route}}/access">
-                <div class='hidden' id='{{user.username}}-change-form'>
-                    <input type='hidden' name='username' value='{{user.username}}'>
+                <div class='hidden' id='{{user.email}}-change-form'>
+                    <input type='hidden' name='email' value='{{user.email}}'>
                     <select name="access_level" required>
                         {% for access_string in ["CAN_VIEW","CAN_COMMENT","CAN_EDIT","SUB_OWNER"] %}
                             {% if access_level > access_from_string[access_string] %}
@@ -226,8 +226,8 @@
                     <button type='button' onclick='show("{{user.username}}-change-button");hide("{{user.username}}-change-form")' class='cancel'>Cancel</button>
                     <input type='submit' value='Change'>
                 </div>
-                <div id='{{user.username}}-change-button'>
-                    <button type='button' onclick='show("{{user.username}}-change-form");hide("{{user.username}}-change-button")'>Change Access</button>
+                <div id='{{user.email}}-change-button'>
+                    <button type='button' onclick='show("{{user.email}}-change-form");hide("{{user.email}}-change-button")'>Change Access</button>
                     <input formaction='{{route}}/deleteAccess' type='submit' value='Delete' class='delete'></p>
                 </div>
             </form>
@@ -236,7 +236,7 @@
         {% endfor %}
 
         <form method="POST" action="{{route}}/access">
-            Username: <input type="text" name="username">
+            Email: <input type="text" name="email">
             Access Level: <select name="access_level" required>
                 {% for access_string in ["CAN_VIEW","CAN_COMMENT","CAN_EDIT","SUB_OWNER"] %}
                     {% if access_level > access_from_string[access_string] %}

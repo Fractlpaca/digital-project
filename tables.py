@@ -32,9 +32,12 @@ class Users(UserMixin, db.Model):
     __tablename__ = "users"
 
     #Columns
-    user_id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(20), nullable=False, unique=True)
-    password_hash = Column(String(128), nullable = False)
+    user_id = Column(String, primary_key=True)
+    name = Column(Text, nullable=False)
+    email = Column(Text, nullable=False, unique=True)
+    profile_pic_url = Column(Text, nullable=False)
+    #username = Column(String(20), nullable=False, unique=True)
+    #password_hash = Column(String(128), nullable = False)
     site_access = Column(Integer, default=0)
 
     def get_id(self):
@@ -50,7 +53,7 @@ login_manager.init_app(app)
 
 @login_manager.user_loader
 def user_loader(user_id):
-    return Users.query.get(int(user_id))
+    return Users.query.get(user_id)
 
 
 class Projects(db.Model):
@@ -58,7 +61,7 @@ class Projects(db.Model):
 
     #Columns
     project_id = Column(Integer, primary_key=True, autoincrement=True)
-    owner_id = Column(Integer, ForeignKey("users.user_id"), nullable = False)
+    owner_id = Column(String, ForeignKey("users.user_id"), nullable = False)
     name = Column(String(50))
     default_access = Column(Integer, default=PROJECT_DEFAULT_ACCESS)
     student_access = Column(Integer, default=PROJECT_STUDENT_ACCESS)
@@ -155,7 +158,9 @@ class Projects(db.Model):
     def user_access_pairs(self):
         """Returns list of tuples (user object, access_level) sorted by access level decreasing,
         then by username lexographically."""
-        return sorted([(access.user,access.access_level) for access in self.user_permissions],key=lambda x: (-x[1],x[0].username))
+        print("    " + str(self.user_permissions),flush=True)
+        print(self.user_permissions[0].user_id)
+        return sorted([(access.user,access.access_level) for access in self.user_permissions],key=lambda x: (-x[1],x[0].name))
     
 
     def update_time(self):
@@ -280,7 +285,7 @@ class ProjectPermissions(db.Model):
 
     #Columns
     project_id = Column(Integer, ForeignKey("projects.project_id"), primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)
+    user_id = Column(String, ForeignKey("users.user_id"), primary_key=True)
     access_level = Column(Integer)
     time_assigned = Column(DateTime)
 
@@ -311,7 +316,7 @@ class Comments(db.Model):
     #Columns
     comment_id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey("projects.project_id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
+    user_id = Column(String, ForeignKey("users.user_id"))
     time_commented = Column(DateTime)
     text = Column(Text)
 
