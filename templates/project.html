@@ -45,52 +45,46 @@
             <div id='content' class="content">
                 {% block content %}
                 {% endblock %}
-                {% if access_level >= access_from_string["CAN_EDIT"] %}
-                <div id="contentForm" class="popup">
-                    <h3>Content</h3>
-                    <h4>Webpage Content</h4>
-                    <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
-                        <select name='type' value='{{project.content_type}}' required>
-                            <option value="game" selected>Game</option>
-                        </select>
-                        <!--input type='file' name='files' webkitdirectory mozdirectory-->
-                        <input type='file' name='file' accept="application/zip" required>
-                        <input type='submit' value="Upload">
-                    </form>
-                    <button class='cancel' onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
-                </div>
-                <button onclick="document.getElementById('contentForm').style.display='block';">Upload Content</button>
-                {% endif %}
             </div>
-            <div class="downloads">
-            <h4>{% if download | length ==0 %}No Downloads{% else %}Downloads{% endif %}</h4>
-            <table>
-            {% for filename, username, time in download_info%}
-            <tr>
-                <td>{{filename}}</td><td>{{username}}</td><td>{{time}}</td>
-                <td><form action="/project/{{project.project_id}}/download" method="POST">
-                    <input type="hidden" name="filename" value='{{filename}}'>
-                    <input type="submit" value="Download">
-                </form></td>
-                <td><form action="/project/{{project.project_id}}/deleteDownload" method="POST">
-                    <input type="hidden" name="filename" value='{{filename}}'>
-                    <input type="submit" value="Delete">
-                </form></td>
-            </tr>
-            {% endfor %}
             {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <tr rowspan=4>
-            <form method='POST' enctype=multipart/form-data action='{{upload_route}}'>
-                <h5>New Download</h5>
-                <input type="hidden" name='type' value='downloadable' required>
-                <!--input type='file' name='files' webkitdirectory mozdirectory-->
-                <input type='file' name='file' required>
-                <input type='text' name='filename'>
-                <input type='submit' value="Upload">
-            </form>
-            </tr>
+            <div id="contentForm" class="popup">
+                <button class='cancel' onclick = "hide('contentForm')">X</button>
+                <h3>Content</h3>
+                <form method='POST' enctype=multipart/form-data action='{{route}}/upload'>
+                    <h4>WebGL Content</h4>
+                    <select name='type' value='{{project.content_type}}' required>
+                        <option value="game" selected>Game</option>
+                    </select>
+                    <!--input type='file' name='files' webkitdirectory mozdirectory-->
+                    <input type='file' name='file' accept="application/zip" required>
+                    <input type='submit' value="Upload">
+                </form>
+                <form method='POST' enctype=multipart/form-data action='{{route}}/upload'>
+                    <h4>New Download</h4>
+                    <input type="hidden" name='type' value='downloadable' required>
+                    <!--input type='file' name='files' webkitdirectory mozdirectory-->
+                    <input type='file' name='file' required>
+                    <input type='text' name='filename' placeholder='File Name' title='Leave blank for original name'>
+                    <input type='submit' value="Upload">
+                </form>
+                <button class='cancel' onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
+            </div>
+            <button onclick="show('contentForm')">Upload Content</button>
             {% endif %}
-            </table>
+            <div class="downloads">
+            <h4>{% if download_info | length == 0 %}No Downloads{% else %}Downloads{% endif %}</h4>
+            {% for filename, username, time in download_info%}
+            <div class='row'>
+                <strong>{{filename}}</strong> - {{username}} - <i>{{time}}</i>
+                <form method="POST">
+                    <input type="hidden" name="filename" value='{{filename}}'>
+                    <input type="submit" value="Download" formaction="/project/{{project.project_id}}/download">
+                    {% if access_level >= access_from_string["CAN_EDIT"] %}
+                    <input class='delete' type="submit" value="Delete" formaction="/project/{{project.project_id}}/deleteDownload">
+                    {% endif %}
+                </form>
+            </div>
+            {% endfor %}
             </div>
             
         </div><div class='right'>
@@ -223,10 +217,10 @@
                             {% endif %}
                         {% endfor %}
                     </select>
-                    <button type='button' onclick='show("{{user.username}}-change-button");hide("{{user.username}}-change-form")' class='cancel'>Cancel</button>
+                    <button type='button' onclick='show("{{user.email}}-change-button");hide("{{user.email}}-change-form")' class='cancel'>Cancel</button>
                     <input type='submit' value='Change'>
                 </div>
-                <div id='{{user.email}}-change-button'>
+                <div class='buttons' id='{{user.email}}-change-button'>
                     <button type='button' onclick='show("{{user.email}}-change-form");hide("{{user.email}}-change-button")'>Change Access</button>
                     <input formaction='{{route}}/deleteAccess' type='submit' value='Delete' class='delete'></p>
                 </div>
@@ -243,7 +237,7 @@
                     <option value='{{access_string}}'>{{access_descriptions[access_from_string[access_string]]}}</option>
                     {% endif %}
                 {% endfor %}
-            </select><br>
+            </select>
             <input type="submit" value="New User">
         </form>
         <!--<h4>Default Access</h4>

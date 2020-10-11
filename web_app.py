@@ -335,7 +335,7 @@ def upload(project_id_string):
     if project is None:
         abort(404)
     route = f"/project/{project.project_id}"
-    project_folder = os.path.join(PROJECTS_FOLDER,str(project.project_id))
+    project_folder = os.path.join(PROJECTS_FOLDER, str(project.project_id))
     if request.method == "POST":
         content_type = request.form.get("type", None)
         file = request.files.get("file",None)
@@ -358,14 +358,18 @@ def upload(project_id_string):
             if not os.path.exists(download_folder):
                 os.mkdir(download_folder)
 
+            mimetype = file.mimetype.split("/")[1]
             filename = request.form.get("filename", None)
+            if filename.split(".")[-1] != mimetype:
+                filename += f".{mimetype}"
             filename = secure_filename(filename or file.filename) 
             filename = project.unique_download_filename(filename)
+            print(f"Download named {filename}",flush=True)
             
             file_path = os.path.join(download_folder, filename)
             file.save(file_path)
             download_data = (filename, current_user.name, datetime.now(timezone.utc))
-            project.set_download_name(download_data)
+            project.add_download_info(download_data)
     return redirect(route)
 
 
@@ -379,8 +383,10 @@ def webGL(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
-    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
-    #return "Temporarily disabled"
+    if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
+        return "<i>Sorry, there is nothing to display.</i>"
+    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    return "Temporarily disabled"
 
 
 

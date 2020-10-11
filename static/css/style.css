@@ -217,6 +217,7 @@ div.content{
     padding: 0px;
     overflow: hidden;
     width: 100%;
+    margin: 5px 0px;
     /*--left-width: 960;*/
 }
 
@@ -239,6 +240,30 @@ img.content{
 
 .description p{
     white-space: pre-line;
+}
+
+.row{
+    background-color: #2aad3a;
+    margin: 4px 0px;
+    height: 32px;
+}
+
+.row form{
+    display: none;
+    float: right;
+}
+
+.row:hover > form{
+    display: inline;
+}
+
+.user_access .buttons{
+    display: none;
+    float: right;
+}
+
+.user_access:hover .buttons{
+    display: inline;
 }
 
 .comments{

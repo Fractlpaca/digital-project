@@ -14,11 +14,12 @@ from sqlalchemy.orm import relationship
 
 from werkzeug.utils import secure_filename
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 #Own imports:
 from access_names import *
 from constants import *
+from helper_functions import *
 
 
 database_file = "sqlite:///{}".format(os.path.join(APP_DIR,"database.db")) #Get path to database file
@@ -241,13 +242,14 @@ class Projects(db.Model):
         which does not already exist in the project's downloads folder.
         """
         new_filename = filename
-        existing_filenames = (line[0] for line in self.get_download_info())
+        existing_filenames = set(line[0] for line in self.get_download_info())
+        print(existing_filenames,flush=True)
         split_filename = filename.split(".")
         first_name = split_filename[0]
         extensions = ".".join(split_filename[1:])
         counter = 0
         while new_filename in existing_filenames:
-            new_filename = secure_filename(f"{first_name}({counter}).{extensions}")
+            new_filename = secure_filename(f"{first_name} {counter}.{extensions}")
             counter+=1
         return new_filename
 
@@ -257,11 +259,6 @@ class Projects(db.Model):
         Attemps to delete file with name 'filename' from the project's downloads folder.
         """
         project_folder = os.path.join(PROJECTS_FOLDER, str(self.project_id))
-        download_folder = os.path.join(project_folder, "downloads")
-        file_path = os.path.join(download_folder, filename)
-        if not os.path.exists(file_path):
-            return
-        os.remove(file_path)
         download_info=self.get_download_info()
         for entry in download_info:
             if entry[0]==filename:
@@ -277,6 +274,11 @@ class Projects(db.Model):
             else:
                 download_log.write(f"{filename},{username},{time.strftime(TIME_FORMAT)}\r\n")
         download_log.close()
+        download_folder = os.path.join(project_folder, "downloads")
+        file_path = os.path.join(download_folder, filename)
+        if not os.path.exists(file_path):
+            return
+        os.remove(file_path)
 
 
 
@@ -345,3 +347,55 @@ admin = Admin(app)
 admin.add_view(AdminView(Users, db.session))
 admin.add_view(AdminView(Projects, db.session))
 admin.add_view(AdminView(Comments, db.session))
+
+
+#Project Helper Functions
+
+def create_project(name,
+                   owner_id,
+                   content_type="none",
+                   default_access=PROJECT_DEFAULT_ACCESS,
+                   student_access=PROJECT_STUDENT_ACCESS,
+                   class_access=PROJECT_CLASS_ACCESS):
+    """Creates and returns a Project Object with the given parameters"""
+    current_time = datetime.now(timezone.utc)
+    new_project = Projects(name=name,
+                           owner_id=owner_id,
+                           content_type=content_type,
+                           time_created=current_time,
+                           default_access=default_access,
+                           student_access=student_access)
+    db.session.add(new_project)
+    db.session.commit()
+    owner_access_level = ProjectPermissions(user_id=owner_id,
+                                                project_id=new_project.project_id,
+                                                access_level=OWNER,
+                                                time_assigned=current_time)
+    project_folder = os.path.join(PROJECTS_FOLDER,str(new_project.project_id))
+    os.mkdir(project_folder)
+    db.session.add(owner_access_level)
+    db.session.commit()
+    return new_project
+
+
+
+def handle_project_id_string(project_id_string, threshold_access=CAN_VIEW):
+    """Takes project id string, and a threshold access the user must meet,
+    and returns a 3-tuple (project object, access_level of user, whether user is logged in)"""
+    is_logged_in = current_user.is_authenticated    
+    try:
+        project_id=int(project_id_string)    
+    except ValueError:
+        return (None, NO_ACCESS, is_logged_in)
+    else:
+        project = Projects.query.filter_by(project_id=project_id).first()
+        if project is None:
+            abort(404)
+        if is_logged_in:
+            access_level = project.access_level(current_user)
+        else:
+            access_level = project.default_access
+        if access_level < threshold_access:
+            abort(404)
+            #To prevent knoledge of existence of project
+        return (project, access_level, is_logged_in)
