@@ -3,8 +3,11 @@
 <head>
 	<meta charset='UTF-8'>
 	<title>{% block title %}Title{% endblock %}</title>
-	<link rel="stylesheet" href="/static/css/style.css">
-	<link rel="icon" href="/static/images/icon.png">
+	<link rel="stylesheet" href="/static/css/base.css">
+    <link rel="icon" href="/static/images/icon.png">
+    {% block head %}
+
+    {% endblock %}
 </head>
 
 <body onresize='{% block resize %}{% endblock %}'>
@@ -22,7 +25,7 @@
             <a href='{{url_for("index")}}'>Home</a>
             {% if is_logged_in %}
             | <a href='{{url_for("dashboard")}}'>Your Dash</a>
-            {% endif %}
+            {% endif %} |
             
         </nav>
         <form method='GET' action='/search'>
@@ -49,8 +52,7 @@
 	
 	{% block footer %}
 	<footer>
-        <p>Just some placeholder text.</p>
-        <p>And some more for luck.</p>
+        <p>Burnside High School 2020</p>
 	</footer>
 	{% endblock %}
 </body>

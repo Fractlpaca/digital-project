@@ -6,16 +6,20 @@
 {% block main_class %}index{% endblock %}
 {% block main %}
     {% block list %}
-    <table class='project_links'>
-    <tr><th colspan=2>Public Projects</th></tr>
+    <div class='project_links'>
     {% for project in public_projects %}
-        <tr>
-            <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
-            <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
-            <span>{{project.get_description()[:500]}}</span></td>
-        </tr>
+    <div class='project_link'>
+        <div>
+            <a href='{{project.route()}}'>
+                <img class='thumbnail' src='{{project.thumbnail_route()}}'></img>
+            </a>
+        </div><div>
+            <a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+            <span>{{project.get_description()[:500]}}</span>
+        </div>
+    </div>
     {% endfor %}
-    </table>
+    </div>
     {% endblock %}
 {% endblock %}
 

@@ -3,22 +3,36 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block main %}
-    <table class='project_links'>
-    <tr><th colspan=2>Your Projects</th></tr>
+    {% if projects_owned | length > 0 %}   
+        <h3>Your Projects</h3>
+    {% endif %}
+    <div class='project_links'>
     {% for project in projects_owned %}
-        <tr>
-            <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
-            <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
-            <span>{{project.get_description()[:500]}}</span></td>
-        </tr>
+        <div class='project_link'>
+            <div>
+                <a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a>
+            </div>
+            <div>
+                <a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+                <span>{{project.get_description()[:500]}}</span>
+            </div>
+        </div>
     {% endfor %}
-    <tr><th colspan=2>Projects Shared With You</th></tr>
+    </div>
+    {% if projects_shared | length > 0 %}
+        <h3>Projects Shared With You</h3>
+    {% endif %}
+    <div class='project_links'>
     {% for project in projects_shared %}
-        <tr>
-            <td><a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a></td>
-            <td><a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
-            <span>{{project.get_description()[:500]}}</span></td>
-        </tr>
+        <div class='project_link'>
+            <div>
+                <a href='{{project.route()}}'><img class='thumbnail' src='{{project.thumbnail_route()}}'></img></a>
+            </div>
+            <div>
+                <a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
+                <span>{{project.get_description()[:500]}}</span>
+            </div>
+        </div>
     {% endfor %}
-    </table>
+    </div>
 {% endblock %}

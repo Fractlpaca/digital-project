@@ -1,0 +1,183 @@
+body{
+    background-color: #5a5a5a;
+    padding: 0px;
+    margin: 0px;
+    font-size: large;
+    font-family: sans-serif;
+}
+
+div{
+    border-radius: 5px;
+}
+
+header{
+    position: relative;
+    top: 0px;
+    height: 66px;
+    padding: 2px;
+    margin: auto;
+    margin-bottom: 10px;
+    width: calc(100%-4px);
+    background-color: #2aad3a;
+}
+
+header img{
+    height: 100%;
+    float: left;
+}
+
+header h1{
+    display: inline;
+    vertical-align: top;
+    color: white;
+}
+
+header form{display: inline-block;}
+
+header div{display: inline-block;}
+
+#logo{
+    position: absolute;
+}
+
+#logo img{
+    height: 66px;
+}
+
+#heading{
+    position: absolute;
+    left: 180px;
+}
+
+#nav{
+    position: absolute;
+    left: 180px;
+    bottom: 2px;
+}
+
+a{
+    color: white;
+}
+
+h3{
+    margin: 7px 0px 10px 0px;
+}
+
+#nav form{
+    display: inline-block;
+}
+
+#nav input[type='text']{
+    background-color: rgba(255,255,255,0.1);
+}
+
+nav{
+    display: inline-block;
+}
+
+#loginout{
+    position: absolute;
+    right: 10px;
+}
+
+#loginout img{
+    float: right;
+    height: 40px;
+    border-radius: 20px;
+    margin: 5px 0px 0px 10px;
+}
+
+button{
+    background-color: #32c33d;
+    border-color: #5bc163;
+}
+
+button.cancel{
+    background-color: #9e9e9e;
+    border-color: #c1b05b
+}
+
+
+div.project_links a{
+    color: black;
+}
+
+div.project_links img.thumbnail{
+    width: 100px;
+    display: inline-block;
+}
+
+div.project_link{
+    background-color: #228c2e;
+    display: block;
+    width: 100%;
+    position: relative;
+}
+
+main.index{
+    margin: auto;
+    width: 98%;
+}
+
+textarea{
+    resize: vertical;
+    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+    font-size: medium;
+    width: calc(100% - 5px);
+}
+
+
+footer{
+    width: 100%;
+    background-color: #131313;
+    color: #eee;
+    overflow: overlay;
+}
+
+.hidden{
+    display: none;
+}
+
+input[type='number']{
+    width: 50px;
+}
+
+button, input[type='submit']{
+    border-radius: 4px;
+}
+
+
+input[type='submit']{
+    background-color: #228C2F ;
+    border-color: #5bc163;
+}
+
+input.delete{
+    background-color: #ef6060;
+    border-color: #987e58;
+}
+
+div.project_links div{
+    display:inline-block;
+    vertical-align: top;
+    margin: 5px;
+}
+
+
+.color-primary-0 { color: #228C2F }
+.color-primary-1 { color: #639969 }
+.color-primary-2 { color: #3DA349 }
+.color-primary-3 { color: #018011 }
+.color-primary-4 { color: #004A09 }
+
+.color-secondary-1-0 { color: #1D626F }
+.color-secondary-1-1 { color: #4F7379 }
+.color-secondary-1-2 { color: #327581 }
+.color-secondary-1-3 { color: #035666 }
+.color-secondary-1-4 { color: #01313A }
+
+.color-secondary-2-0 { color: #7EA929 }
+.color-secondary-2-1 { color: #A2B877 }
+.color-secondary-2-2 { color: #9BC449 }
+.color-secondary-2-3 { color: #679A01 }
+.color-secondary-2-4 { color: #3B5800 }

@@ -17,8 +17,9 @@ function resizeContent(event){
     var targetWidth = contentRestrictor.clientWidth;
     var scale = targetWidth / contentWidth;
     content.style.setProperty("transform","scale("+scale+")");
-    contentContainer.style.setProperty("height",contentHeight*scale + "px")
+    contentContainer.style.setProperty("height",contentHeight*scale + "px");
     console.log(contentHeight*scale + "px");
 }
+
 
 resizeContent();

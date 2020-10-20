@@ -157,8 +157,11 @@ def dashboard():
     """
     user_id = current_user.get_id()
     projects_owned = current_user.projects_owned
+    #Filter projects
     projects_shared = ProjectPermissions.query.filter(ProjectPermissions.user_id==user_id, CAN_VIEW <= ProjectPermissions.access_level, ProjectPermissions.access_level< OWNER).all()
+    #Extract projects from project permissions
     projects_shared = [project_access.project for project_access in projects_shared]
+    #Public projects
     other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).all()
     return render_template("dash.html",
                            user=current_user,
@@ -179,11 +182,13 @@ def search():
     is_logged_in = current_user.is_authenticated
     user = current_user if is_logged_in else None
     search_text = request.args.get("search","").strip().lower()
+    #Get public projects
     if is_logged_in:
         public_projects = Projects.query.filter(or_(Projects.student_access>=CAN_VIEW, Projects.default_access>=CAN_VIEW)).all()
     else:
         public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).all()
     results=[]
+    #Compile results
     for project in public_projects:
         if search_text in str(project.name).lower() or search_text in str(project.tags).lower():
             results.append(project)
@@ -218,21 +223,24 @@ def project(project_id_string):
     Users with appropiate access may edit the project though this page.
     Restrictions: None (Some page content may be restricted by template)
     """
+    #Check valid and accessable project
     project, access_level, is_logged_in=handle_project_id_string(project_id_string,CAN_VIEW)
     if project is None:
-        abort(404)    
-    access_level_string = access_messages[access_level]
+        abort(404)
     route=f"/project/{project.project_id}"
+    #Sorted pairs of users and permissions for sharing
     access_pairs = project.user_access_pairs()
     download_info = list(project.get_download_info())
-    current_time=datetime.now(TIMEZONE)
+    current_time=get_current_time()
+    #Sort download info by most recent first, then alphabetical, then uploader name
     download_info.sort(key=lambda x:(current_time-x[2],x[0],x[1]))
-    download_info =[(filename, name, format_time_delta(datetime.now(timezone.utc)-time)) for filename, name, time in download_info]
+    #Change time field to time difference string
+    download_info =[(filename, name, format_time_delta(current_time-time)) for filename, name, time in download_info]
     share_links = ShareLinks.query.filter(ShareLinks.project_id==project.project_id, ShareLinks.access_level_granted<=access_level)
     base_template_args = {
         "is_logged_in": is_logged_in,
         "user": (current_user if is_logged_in else None),
-        "site_access": (current_user.site_access if is_logged_in else 0),
+        "site_access": (current_user.site_access if is_logged_in else NORMAL),
         "current_time": current_time,
         "format_time_delta": format_time_delta
     }
@@ -267,9 +275,11 @@ def thumbnail(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
+    #Check for thumbnails in project folder.
     for extension in THUMBNAIL_EXTENSIONS:
         if os.path.exists(f"projects/{project.project_id}/thumbnail.{extension}"):
             return send_from_directory(f"projects/{project.project_id}", f"thumbnail.{extension}")
+    #Return default thumbnail
     return send_from_directory(f"static/images","default_thumbnail.png")
 
 
@@ -287,7 +297,7 @@ def comment(project_id_string):
     route = f"/project/{project.project_id}"
     
     new_comment_text = request.form.get("text", None)
-    current_time = datetime.now(TIMEZONE)
+    current_time = get_current_time()
     if new_comment_text is not None and new_comment_text != "":
         new_comment = Comments(project_id=project.project_id,
                                user_id=current_user.user_id if is_logged_in else None,
@@ -307,15 +317,18 @@ def deleteComment(project_id_string):
     Form submission deletes comment.
     Restictions: Authenticated, Site Access: MOD
     """
+    #Only mods/admins can delete comments
     if current_user.site_access < MOD:
-        abort(403)    
+        abort(403) 
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, NO_ACCESS)
     if project is None:
         abort(404)
+
     try:
         comment_id = int(request.form.get("comment_id",None))
         comment = Comments.query.filter_by(comment_id=comment_id).first()
     except TypeError:
+        #In the case the comment_id was not an int
         comment = None
     if comment is not None:
         db.session.delete(comment)
@@ -334,6 +347,7 @@ def upload(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
     if project is None:
         abort(404)
+    
     route = f"/project/{project.project_id}"
     project_folder = os.path.join(PROJECTS_FOLDER, str(project.project_id))
     if request.method == "POST":
@@ -344,16 +358,23 @@ def upload(project_id_string):
         if content_type == "game":
             if file.mimetype != "application/zip":
                 return redirect(route)
-            webgl_folder = os.path.join(project_folder,"webgl")            
+            webgl_folder = os.path.join(project_folder,"webgl")     
+
+            #Delete contents of webgl folder       
             shutil.rmtree(webgl_folder, ignore_errors=True)
             os.mkdir(webgl_folder)
+
+            #Save zip file
             file_path = os.path.join(webgl_folder, "webgl_game.zip")
             file.save(file_path)
-            #Unzip file:
+
+            #Extract files to webgl folder
             if is_zipfile(os.path.join(webgl_folder, "webgl_game.zip")):
                 zipped_file = ZipFile(file_path, "r")
                 zipped_file.extractall(path=webgl_folder)
+            
         elif content_type == "downloadable":
+            #Ensure downloads folder exists
             download_folder = os.path.join(project_folder, "downloads")
             if not os.path.exists(download_folder):
                 os.mkdir(download_folder)
@@ -666,3 +687,4 @@ if __name__ == "__main__":
     
 
     app.run(ssl_context='adhoc', debug=True)
+    #app.run(host="192.168.1.8", ssl_context='adhoc', debug=False)
