@@ -211,7 +211,7 @@ def newProject():
         owner_id = current_user.user_id
         new_project = create_project(name,owner_id)
         return redirect("/project/{}".format(new_project.project_id))
-    return render_template("newProject.html")
+    return render_template("newProject.html", user=current_user, is_logged_in=True)
 
 
 
@@ -244,6 +244,7 @@ def project(project_id_string):
         "current_time": current_time,
         "format_time_delta": format_time_delta
     }
+    #Project specific template parameters.
     project_template_args={
         "project": project,
         "access_level": access_level,
@@ -279,7 +280,7 @@ def thumbnail(project_id_string):
     for extension in THUMBNAIL_EXTENSIONS:
         if os.path.exists(f"projects/{project.project_id}/thumbnail.{extension}"):
             return send_from_directory(f"projects/{project.project_id}", f"thumbnail.{extension}")
-    #Return default thumbnail
+    #Return default thumbnail if thumbnail not found
     return send_from_directory(f"static/images","default_thumbnail.png")
 
 
@@ -305,7 +306,7 @@ def comment(project_id_string):
                                text=new_comment_text)
         db.session.add(new_comment)
         db.session.commit()
-    
+    # AJAX needed
     return redirect(route)
 
 
@@ -319,7 +320,8 @@ def deleteComment(project_id_string):
     """
     #Only mods/admins can delete comments
     if current_user.site_access < MOD:
-        abort(403) 
+        abort(403)
+    
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, NO_ACCESS)
     if project is None:
         abort(404)
@@ -333,6 +335,8 @@ def deleteComment(project_id_string):
     if comment is not None:
         db.session.delete(comment)
         db.session.commit()
+    
+    # AJAX needed
     return redirect(f"/project/{project.project_id}")
 
 
@@ -379,18 +383,20 @@ def upload(project_id_string):
             if not os.path.exists(download_folder):
                 os.mkdir(download_folder)
 
-            mimetype = file.mimetype.split("/")[1]
+            # mimetype = file.mimetype.split("/")[1]
             filename = request.form.get("filename", None)
-            if filename.split(".")[-1] != mimetype:
-                filename += f".{mimetype}"
+            # if filename.split(".")[-1] != mimetype:
+            #     filename += f".{mimetype}"
             filename = secure_filename(filename or file.filename) 
             filename = project.unique_download_filename(filename)
-            print(f"Download named {filename}",flush=True)
+            # print(f"Download named {filename}",flush=True)
             
             file_path = os.path.join(download_folder, filename)
             file.save(file_path)
             download_data = (filename, current_user.name, datetime.now(timezone.utc))
             project.add_download_info(download_data)
+    
+    # AJAX needed.
     return redirect(route)
 
 
@@ -404,7 +410,9 @@ def webGL(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
+    
     if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
+        #The game files are missing.
         return "<i>Sorry, there is nothing to display.</i>"
     #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
     return "Temporarily disabled"
@@ -422,6 +430,7 @@ def gamedata(project_id_string, folder, path):
         abort(404)
     project_dir = os.path.join(PROJECTS_FOLDER, str(project.project_id))
     content_dir = os.path.join(project_dir,"webgl")
+    #Only the folders provided by the game build may be accessed.
     if folder not in ["TemplateData", "Build"]: abort(404)
     inner_path = os.path.realpath(os.path.join(content_dir, folder))
     inner_path = os.path.realpath(os.path.join(inner_path, path))
@@ -463,6 +472,7 @@ def deleteDownload(project_id_string):
     if project is None:
         abort(404)
     project.delete_download(request.form.get("filename",""))
+    # AJAX needed
     return redirect(f"/project/{project.project_id}")
 
 
@@ -493,6 +503,7 @@ def projectAccess(project_id_string):
                 if new_access < NO_ACCESS or new_access > SUB_OWNER:
                     return redirect(route)
                 project.assign_project_access(added_user.user_id, new_access)
+    # AJAX needed
     return redirect(route)
 
 
@@ -519,6 +530,7 @@ def deleteProjectAccess(project_id_string):
                 else:
                     db.session.delete(existing_access)
                     db.session.commit()
+    # AJAX needed
     return redirect(route)
 
 
@@ -529,6 +541,7 @@ def create_share_link(project_id_string):
     """
     Form submission creates a sharable link.
     Restrictions: Authenticated, SUB_OWNER.
+    Possibly to be deprecated.
     """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
@@ -630,6 +643,7 @@ def simpleShare(project_id_string):
             project.default_access = CAN_VIEW
             project.student_access = CAN_COMMENT
     db.session.commit()
+    # AJAX needed
     return redirect(f"/project/{project.project_id}")
 
 
@@ -649,6 +663,7 @@ def editProject(project_id_string):
         title = form.get("title", "")
         if title != "":
             project.name = title
+            return title
         
         authors = form.get("authors", "")
         if authors != "":
@@ -670,7 +685,8 @@ def editProject(project_id_string):
                 if thumbnail_file.mimetype==f"image/{extension}":
                     thumbnail_file.save(f"{thumbnail_path}.{extension}")
         project.update_time()
-         
+    
+    # AJAX needed
     return redirect(f"/project/{project.project_id}")
 
 

@@ -97,23 +97,6 @@ button.cancel{
     border-color: #c1b05b
 }
 
-
-div.project_links a{
-    color: black;
-}
-
-div.project_links img.thumbnail{
-    width: 100px;
-    display: inline-block;
-}
-
-div.project_link{
-    background-color: #228c2e;
-    display: block;
-    width: 100%;
-    position: relative;
-}
-
 main.index{
     margin: auto;
     width: 98%;
@@ -157,10 +140,39 @@ input.delete{
     border-color: #987e58;
 }
 
-div.project_links div{
+div.project_links{
+    padding: 5px;
+}
+
+div.project_links a{
+    color: black;
+}
+
+div.project_links img.thumbnail{
+    width: 100px;
+    display: inline-block;
+}
+
+div.project_link{
+    background-color: #228c2e;
+    display: block;
+    width: 100%;
+    position: relative;
+    margin: 5px 0px;
+}
+
+div.project_link div{
     display:inline-block;
     vertical-align: top;
     margin: 5px;
+}
+
+button.new{
+    height: 30px;
+    width: 100px;
+    background-color: #228C2F ;
+    border-color: #004A09;
+    color: white;
 }
 
 

@@ -18,6 +18,7 @@
             </div>
         </div>
     {% endfor %}
+    <a href='{{url_for("newProject")}}'><button class='new'><strong>New Project</strong></button></a>
     </div>
     {% if projects_shared | length > 0 %}
         <h3>Projects Shared With You</h3>
