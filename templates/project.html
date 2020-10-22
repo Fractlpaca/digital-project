@@ -9,23 +9,19 @@
 {% block main_class %}project{% endblock %}
 {% block main %}
     <div id="titlebar">
-        <div class='centered'>
-        <div id="project_title">
-            <h1>{{project.name}}</h1>
+        <div id="title_div">
+            <h1 id="title">{{project.name}}</h1>
             {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <button onclick="show('title_form');hide('project_title');">Edit</button>
+            <button onclick="show('title_form');hide('title_div');">Edit</button>
             </div>
             <div id='title_form'>
-            <form method="POST" action="{{route}}/edit">
-                <input type="text" name="title" value="{{project.name}}">
-                <input type="submit" value="Change">
-            </form>
-            <button class='cancel' onclick="show('project_title');hide('title_form')">Cancel</button>
+                <input id="title_input" type="text" name="title" value="{{project.name}}">
+                <button class='submit' onclick="ajaxEditTitle('{{project.route()}}')">Change</button>
+                <button class='cancel' onclick="show('title_div');hide('title_form')">Cancel</button>
             {% endif %}
         </div>
-        </div>
         
-        <div id="thumbnail">
+        <div id="thumbnail_div">
             <img class='thumbnail' src='{{project.thumbnail_route()}}'></img>
         {% if access_level >= access_from_string["CAN_EDIT"] %}
             <img class='thumbnail' id="thumbnail_button" src="/static/images/change_thumbnail.png" onclick="show('thumbnail_form');"></img>
@@ -50,7 +46,7 @@
                 {% endblock %}
             </div>
             {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <div id="contentForm" class="popup">
+            <div id="content_form" class="popup">
                 <button class='cancel' onclick = "hide('contentForm')">X</button>
                 <h3>Content</h3>
                 <form method='POST' enctype=multipart/form-data action='{{route}}/upload'>
@@ -90,62 +86,61 @@
             
         </div><div class='right'>
             <h3>Description:</h3>
-            <div class="description" id="description">
-                <p>{{description}}</p>
+            <div id="description_div">
+                <p id="description">{{description}}</p>
                 {% if access_level >= access_from_string["CAN_EDIT"] %}
-                <button id="description_button" onclick="show('description_form');hide('description');">Edit</button>
+                <button onclick="show('description_form');hide('description_div');">Edit</button>
             </div>
-            <div id=description_form>
-                <form method="POST" action="{{route}}/edit">
-                    <textarea type="text" name="description" rows=10>{{description}}</textarea>
-                    <input type="submit" value="Change">
-                </form>
-                <button class='cancel' onclick="show('description');hide('description_form')">Cancel</button>
+            <div id='description_form'>
+                <textarea id="description_input" name="description" rows=10>{{description}}</textarea>
+                <button class="submit" onclick="ajaxEditDescription('{{route}}')">Change</button>
+                <button class='cancel' onclick="show('description_div');hide('description_form')">Cancel</button>
                 {% endif %}
             </div>
             <h3>Tags:</h3>
-            <div id="tags">
-                {% for tag in tags_list %}
-                    <p>{{tag}}</p>
-                {% endfor %}
-                {% if access_level >= access_from_string["CAN_EDIT"] %}
-                <button id="tags_button" onclick="show('tags_form');hide('tags');">Edit</button>
+            <div id='tags_div'>
+                <div id="tags">
+                    {% for tag in tags_list %}
+                        <p>{{tag}}</p>
+                    {% endfor %}
+                    {% if access_level >= access_from_string["CAN_EDIT"] %}
+                </div>
+                <button id="tags_button" onclick="show('tags_form');hide('tags_div');">Edit</button>
             </div>
             <div id="tags_form">
-                <form method="POST" action="{{route}}/edit">
-                    <input type="text" name="tags" value="{{tags}}">
-                    <input type="submit" value="Change">
-                </form>
-                <button class='cancel' onclick="show('tags');hide('tags_form')">Cancel</button>
+                <input id="tags_input" type="text" name="tags" value="{{tags}}">
+                <button class="submit" onclick="ajaxEditTags('{{route}}')">Change</button>
+                <button class='cancel' onclick="show('tags_div');hide('tags_form')">Cancel</button>
                 {% endif %}
             </div>
             <h3>Authors</h3>
-            <div id="authors">
-                {{authors}}<br>
+            <div id="authors_div">
+                <div id='authors'>
+                    <p>{{authors}}</p>
+                </div>
             {% if access_level >= access_from_string["CAN_EDIT"] %}
-                <button onclick="show('authors_form');hide('authors');">Edit</button>
+                <button onclick="show('authors_form');hide('authors_div');">Edit</button>
             </div>
             <div id='authors_form'>
-                <form method="POST" action="{{route}}/edit">
-                    <input type="text" name="authors" value="{{authors}}">
-                    <input type="submit" value="Change">
-                </form>
-                <button class='cancel' onclick="show('authors');hide('authors_form')">Cancel</button>
+                <input id="authors_input" type="text" name="authors" value="{{authors}}">
+                <button class="submit" onclick="ajaxEditAuthors('{{route}}')">Change</button>
+                <button class='cancel' onclick="show('authors_div');hide('authors_form')">Cancel</button>
             {% endif %}
             </div>
         </div>
     </div>
     
-    <div id='comments'>
+    <div id='comments_section'>
         <h3>Comments</h3>
         {% if access_level >= access_from_string["CAN_COMMENT"] %}
-        <form id='comment' action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
+        <form id='new_comment' action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
             <textarea name="text" rows=3></textarea>
             <div class='comment_options'>
                 <input type='submit' value='Post'>
             </div>
         </form>
         {% endif %}
+        <div id='comments'>
         {% for comment in comments|reverse %}
         <div class='comment'>
             <div>
@@ -161,6 +156,7 @@
             <p>{{comment.text}}</p>
         </div>
         {% endfor %}
+        </div>
         {% if comments|length == 0 %}
             <span>No Comments</span>
         {% endif %}

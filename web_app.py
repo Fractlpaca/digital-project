@@ -657,25 +657,35 @@ def editProject(project_id_string):
     """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
-        abort(404)    
+        abort(404)
+    
+    print("Request is ",request, flush=True)
     if request.method == "POST":
         form = request.form
         title = form.get("title", "")
         if title != "":
             project.name = title
+            db.session.commit()
+            print(title, flush=True)
             return title
         
         authors = form.get("authors", "")
         if authors != "":
             project.set_authors(authors)
-        
+            db.session.commit()
+            return render_template("ajax_responses/paragraph_list.html", items=project.authors.split(","))
+
         description = form.get("description", "")
         if description != "":
             project.set_description(description)
+            db.session.commit()
+            return "OK"
         
         tags = form.get("tags", "")
         if tags != "":
             project.set_tags(tags)
+            db.session.commit()
+            return render_template("ajax_responses/paragraph_list.html", items=project.tags.split(","))
         
         thumbnail_file = request.files.get("thumbnail")
         thumbnail_path = os.path.join(PROJECTS_FOLDER,str(project.project_id))

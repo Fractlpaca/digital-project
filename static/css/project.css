@@ -18,7 +18,7 @@ div.centered{
     font-size: 24px;
 }
 
-#project_title h1{
+#title{
    display: inline-block; 
    margin-left: 10px;
 }
@@ -110,7 +110,7 @@ div.right div{
     padding: 5px;
 }
 
-#description p{
+#description{
     white-space: pre-line;
 }
 
@@ -138,7 +138,7 @@ div.user_access:hover .buttons{
     display: inline;
 }
 
-#comments{
+#comments_section{
     padding: 5px;
     margin: 5px 0px;
     width: 82%;

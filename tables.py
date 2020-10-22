@@ -78,7 +78,7 @@ class Projects(db.Model):
     comments = relationship("Comments", back_populates="project")
     owner = relationship("Users", back_populates="projects_owned")
     
-    def route(self): return f"/project/{self.project_id}"
+    def route(self): return f"/project/{str(self.project_id)}"
     def folder(self): return f"projects/{self.project_id}"
     def thumbnail_route(self): return f"/project/{self.project_id}/thumbnail"
     
