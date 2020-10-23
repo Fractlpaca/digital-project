@@ -306,8 +306,15 @@ def comment(project_id_string):
                                text=new_comment_text)
         db.session.add(new_comment)
         db.session.commit()
-    # AJAX needed
-    return redirect(route)
+        return render_template( "ajax_responses/comment.html",
+                                comment=new_comment,
+                                current_time=get_current_time(),
+                                site_access=current_user.site_access,
+                                format_time_delta=format_time_delta,
+                                route=route
+        )
+    else:
+        return "Comment may not be empty.",400
 
 
 
@@ -335,9 +342,10 @@ def deleteComment(project_id_string):
     if comment is not None:
         db.session.delete(comment)
         db.session.commit()
+    else:
+        return "Comment could not be found.", 404
     
-    # AJAX needed
-    return redirect(f"/project/{project.project_id}")
+    return "OK"
 
 
 
@@ -665,9 +673,9 @@ def editProject(project_id_string):
         title = form.get("title", "")
         if title != "":
             project.name = title
+            project.update_time()
             db.session.commit()
-            print(title, flush=True)
-            return title
+            return "OK"
         
         authors = form.get("authors", "")
         if authors != "":
@@ -694,10 +702,12 @@ def editProject(project_id_string):
             for extension in THUMBNAIL_EXTENSIONS:
                 if thumbnail_file.mimetype==f"image/{extension}":
                     thumbnail_file.save(f"{thumbnail_path}.{extension}")
-        project.update_time()
+            project.update_time()
+            #return redirect(f"/project/{project.project_id}")
+            return "OK"
+        
     
-    # AJAX needed
-    return redirect(f"/project/{project.project_id}")
+    return "Request not understood. Try reloading.", 400
 
 
 

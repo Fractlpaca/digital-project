@@ -21,13 +21,19 @@ function resizeContent(event){
     console.log(contentHeight*scale + "px");
 }
 
+
+
 function ajaxEditTitle(route){
-    var newName = document.getElementById("title_input").value;
+    var newName = $("#title_input").val();
     console.log(newName);
     $.post(route+"/edit", {title: newName}, function(data, status){
-        if(status=="success"){
-            $("#title").text(data);
-            $("title").text(data);
+        $("#title").text($("#title_input").val());
+        $("title").text($("#title_input").val());
+    }).fail(function(xhr){
+        if(xhr.readyState==4){
+            alert(xhr.responseText);
+        }else{
+            alert("Could not complete request. Please try again later.")
         }
     });
     show('title_div');
@@ -35,11 +41,15 @@ function ajaxEditTitle(route){
 }
 
 function ajaxEditTags(route){
-    var newTags = document.getElementById("tags_input").value;
+    var newTags = $("#tags_input").val();
     $.post(route+"/edit", {tags: newTags}, function(data, status){
         //alert(data);
-        if(status=="success"){
-            $("#tags").html(data);
+        $("#tags").html(data);
+    }).fail(function(xhr){
+        if(xhr.readyState==4){
+            alert(xhr.responseText);
+        }else{
+            alert("Could not complete request. Please try again later.")
         }
     });
     show('tags_div');
@@ -47,11 +57,15 @@ function ajaxEditTags(route){
 }
 
 function ajaxEditAuthors(route){
-    var newAuthors = document.getElementById("authors_input").value;
+    var newAuthors = $("#authors_input").val();
     $.post(route+"/edit", {authors: newAuthors}, function(data, status){
         //alert(data);
-        if(status=="success"){
-            $("#authors").html(data);
+        $("#authors").html(data);
+    }).fail(function(xhr){
+        if(xhr.readyState==4){
+            alert(xhr.responseText);
+        }else{
+            alert("Could not complete request. Please try again later.")
         }
     });
     show('authors_div');
@@ -59,18 +73,97 @@ function ajaxEditAuthors(route){
 }
 
 function ajaxEditDescription(route){
-    var newDescription = document.getElementById("description_input").value;
+    var newDescription = $("#description_input").val();
     $.post(route+"/edit", {description: newDescription}, function(data, status){
         var newDescription = document.getElementById("description_input").value;
         //alert(newDescription);
         //alert(data);
-        if(status=="success"){
-            $("#description").text(newDescription);
+        $("#description").text(newDescription);
+    }).fail(function(xhr){
+        if(xhr.readyState==4){
+            alert(xhr.responseText);
+        }else{
+            alert("Could not complete request. Please try again later.")
         }
     });
     show('description_div');
     hide('description_form');
 }
+
+
+function ajaxAddComment(route){
+    var newComment = $("#new_comment").val();
+    $.post(route+"/comment", {text: newComment}, function(data, status){
+        var newDescription = document.getElementById("description_input").value;
+        //alert(newDescription);
+        $("#comments").prepend(data);
+        $("#new_comment").val("");
+    }).fail(function(xhr){
+        if(xhr.readyState==4){
+            alert(xhr.responseText);
+        }else{
+            alert("Could not complete request. Please try again later.")
+        }
+    });
+}
+
+
+function ajaxRemoveComment(route, comment_id){
+    if(confirm("Permanantly delete comment?")){
+        $.post(route+"/deleteComment", {comment_id: comment_id}, function(data, status){
+            //alert(newDescription);
+            $("#comment_"+String(comment_id)).remove();
+            
+        }).fail(function(xhr){
+            if(xhr.readyState==4){
+                alert(xhr.responseText);
+            }else{
+                alert("Could not complete request. Please try again later.")
+            }
+        });
+    }
+}
+
+
+/*ajaxChangeThumbnail(route){
+    var newThumbnail = $("#new_comment").val();
+    $.post(route+"/comment", {text: newComment}, function(data, status){
+        var newDescription = document.getElementById("description_input").value;
+        //alert(newDescription);
+        $("#comments").prepend(data);
+        $("#new_comment").val("");
+    }).fail(function(xhr){
+        if(xhr.readyState==4){
+            alert(xhr.responseText);
+        }else{
+            alert("Could not complete request. Please try again later.")
+        }
+    });
+}*/
+
+function ajaxChangeThumbnail(route){
+    $.ajax({
+        url: $("#thumbnail_form").attr("action"),
+        //contentType: "multipart/form-data",
+        type: "POST",
+        data: new FormData(document.getElementById("thumbnail_form")),
+        contentType: false,
+        processData: false,
+        success: function(data, status, xhr){
+            alert(data);
+            var date = new Date();
+            var now = String(date.getTime());
+            $("#thumbnail").attr("src",route+"/thumbnail?time="+now);
+        },
+        error: function(xhr){
+            if(xhr.readyState==4){
+                alert(xhr.responseText);
+            }else{
+                alert("Could not complete request. Please try again later.")
+            }
+        }
+    });
+};
 
 
 resizeContent();

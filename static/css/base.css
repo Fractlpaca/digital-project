@@ -135,7 +135,7 @@ input[type='submit']{
     border-color: #5bc163;
 }
 
-input.delete{
+.delete{
     background-color: #ef6060;
     border-color: #987e58;
 }

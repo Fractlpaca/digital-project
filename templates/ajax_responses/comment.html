@@ -1,0 +1,10 @@
+<div class='comment' id="comment_{{comment.comment_id}}">
+    <div>
+        <img src='{{comment.user.profile_pic_url}}'></img><strong>{% if comment.user %}{{comment.user.name}}{% else %}unkown{% endif %}</strong>
+        {% if site_access >= 1 %}
+            <button class='delete' onclick='ajaxRemoveComment("{{route}}","{{comment.comment_id}}")'>Remove Comment</button>
+        {% endif %}
+        <span>{{format_time_delta(current_time-comment.get_time_commented())}}</span>
+    </div>
+    <p>{{comment.text}}</p>
+</div>

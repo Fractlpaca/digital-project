@@ -22,16 +22,16 @@
         </div>
         
         <div id="thumbnail_div">
-            <img class='thumbnail' src='{{project.thumbnail_route()}}'></img>
+            <img id="thumbnail" class='thumbnail' src='{{project.thumbnail_route()}}'></img>
         {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <img class='thumbnail' id="thumbnail_button" src="/static/images/change_thumbnail.png" onclick="show('thumbnail_form');"></img>
+            <img class='thumbnail' id="thumbnail_button" src="/static/images/change_thumbnail.png" onclick="show('thumbnail_popup');"></img>
         </div>
-        <div id="thumbnail_form" class='popup'>
-            <form method="POST" enctype="multipart/form-data" action="{{route}}/edit">
+        <div id="thumbnail_popup" class='popup'>
+            <form id="thumbnail_form" method="POST" enctype="multipart/form-data" action="{{route}}/edit">
                 <input type="file" name="thumbnail" accept="image/png, image/jpeg,image/gif"><br>
-                <input type="submit" value="Change">
             </form>
-            <button class='cancel' onclick="hide('thumbnail_form')">Cancel</button>
+            <button class="submit" onclick='ajaxChangeThumbnail("{{route}}")'>Change</button>
+            <button class='cancel' onclick="hide('thumbnail_popup')">Cancel</button>
         {% endif %}
         </div>
         
@@ -133,23 +133,18 @@
     <div id='comments_section'>
         <h3>Comments</h3>
         {% if access_level >= access_from_string["CAN_COMMENT"] %}
-        <form id='new_comment' action='{{url_for("comment", project_id_string=project.project_id)}}' method='POST'>
-            <textarea name="text" rows=3></textarea>
+            <textarea id="new_comment" name="text" rows=3></textarea>
             <div class='comment_options'>
-                <input type='submit' value='Post'>
+                <button class='submit' onclick="ajaxAddComment('{{route}}')">Post</button>
             </div>
-        </form>
         {% endif %}
         <div id='comments'>
         {% for comment in comments|reverse %}
-        <div class='comment'>
+        <div class='comment' id="comment_{{comment.comment_id}}">
             <div>
                 <img src='{{comment.user.profile_pic_url}}'></img><strong>{% if comment.user %}{{comment.user.name}}{% else %}unkown{% endif %}</strong>
                 {% if site_access >= 1 %}
-                <form action="{{route}}/deleteComment" method="POST">
-                    <input type="hidden" name="comment_id" value='{{comment.comment_id}}'>
-                    <input class='delete' type=submit value="Remove Comment">
-                </form>
+                    <button class='delete' onclick='ajaxRemoveComment("{{route}}","{{comment.comment_id}}")'>Remove Comment</button>
                 {% endif %}
                 <span>{{format_time_delta(current_time-comment.get_time_commented())}}</span>
             </div>

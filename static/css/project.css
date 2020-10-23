@@ -23,7 +23,7 @@ div.centered{
    margin-left: 10px;
 }
 
-#title_form, #description_form, #tags_form, #authors_form, #thumbnail_form{
+#title_form, #description_form, #tags_form, #authors_form{
     display: none;
 }
 
@@ -151,11 +151,11 @@ div.comment_options{
     height: 20px;
 }
 
-#comment{
+#new_comment{
     background-color: white;
 }
 
-#comment input[type='submit']{
+#comments_section button.submit{
     position: absolute;
     right: 0px;
 }
@@ -193,7 +193,7 @@ div.comment span{
     margin-right: 7px;
 }
 
-div.comment form{
+div.comment button.delete{
     float: right;
 }
 
