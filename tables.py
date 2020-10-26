@@ -113,7 +113,7 @@ class Projects(db.Model):
         elif existing_access.access_level != access_level and existing_access.access_level < OWNER:
             existing_access.access_level = access_level
             existing_access.time_assigned = current_time
-        self.update_time()  
+        #self.update_time()  
         db.session.commit()
         return existing_access or new_access
     
@@ -151,6 +151,8 @@ class Projects(db.Model):
             return self.default_access
         if user.site_access == ADMIN:
             return OWNER
+        elif user.site_access == MOD:
+            return CAN_COMMENT
         project_access = ProjectPermissions.query.filter_by(project_id=self.project_id,
                                                                 user_id=user.user_id).first()
         if project_access is None:
@@ -168,7 +170,7 @@ class Projects(db.Model):
 
     def update_time(self):
         """Updates last edit time of project."""
-        current_time = datetime.now(timezone.utc)
+        current_time = get_current_time()
         self.time_updated = current_time
         db.session.commit()
     
@@ -185,7 +187,6 @@ class Projects(db.Model):
             file = open(description_file, "r")
             text = file.read()
             file.close()
-            self.update_time()
             return text
     
 
@@ -198,7 +199,7 @@ class Projects(db.Model):
         file = open(description_file, "w")
         file.write(text)
         file.close()
-        self.update_time()       
+        self.update_time()      
 
 
     def add_download_info(self, download_info):
@@ -212,6 +213,7 @@ class Projects(db.Model):
         except:
             return
         download_log.write(f"{filename},{username},{time}\r\n")
+        self.update_time()
 
 
     def get_download_info(self):
@@ -282,6 +284,7 @@ class Projects(db.Model):
         if not os.path.exists(file_path):
             return "File not found", 404
         os.remove(file_path)
+        self.update_time()
         return "OK"
 
 
@@ -368,6 +371,7 @@ def create_project(name,
                            owner_id=owner_id,
                            content_type=content_type,
                            time_created=current_time,
+                           time_updated=current_time,
                            default_access=default_access,
                            student_access=student_access)
     db.session.add(new_project)

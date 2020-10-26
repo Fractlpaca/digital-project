@@ -3,8 +3,9 @@
 {% block title %}New Project{% endblock %}
 
 {% block main %}
-    <form action="newProject" method="POST">
+    <form action="newProject" method="POST" style='display: inline;'>
         <input type="text" name="name" required>
         <input type="submit" value="Create Project">
     </form>
+    <a href="{{url_for('dashboard')}}"><button class='cancel'>Cancel</button></a>
 {% endblock %}

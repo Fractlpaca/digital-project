@@ -232,6 +232,13 @@ div.user_access{
     width: calc(100% - 20px);
 }
 
+div.user_access img{
+    float: left;
+    height: 28px;
+    border-radius: 14px;
+    margin: 1px 5px 0px 1px;
+}
+
 div.user_access form{
     position: absolute;
     right: 3px;

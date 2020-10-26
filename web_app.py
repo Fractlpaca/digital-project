@@ -36,7 +36,7 @@ def index():
     """
     is_logged_in = current_user.is_authenticated
     user = current_user if is_logged_in else None
-    public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).all()
+    public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).order_by(Projects.time_updated.desc()).all()
     return render_template("index.html",
                            is_logged_in=is_logged_in,
                            user=user,
@@ -157,12 +157,16 @@ def dashboard():
     """
     user_id = current_user.get_id()
     projects_owned = current_user.projects_owned
+    #Sort projects by latest first
+    projects_owned.sort(key=lambda x:x.time_updated, reverse=True)
     #Filter projects
     projects_shared = ProjectPermissions.query.filter(ProjectPermissions.user_id==user_id, CAN_VIEW <= ProjectPermissions.access_level, ProjectPermissions.access_level< OWNER).all()
     #Extract projects from project permissions
     projects_shared = [project_access.project for project_access in projects_shared]
+    #Sort projects by latest first
+    projects_shared.sort(key=lambda x:x.time_updated, reverse=True)
     #Public projects
-    other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).all()
+    other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).order_by(Projects.time_updated.desc()).all()
     return render_template("dash.html",
                            user=current_user,
                            projects_owned=projects_owned,
@@ -188,10 +192,14 @@ def search():
     else:
         public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).all()
     results=[]
-    #Compile results
+    #Filter results
     for project in public_projects:
         if search_text in str(project.name).lower() or search_text in str(project.tags).lower():
             results.append(project)
+    #Sort results by alphabetical order, then latest first.
+    results.sort(key=lambda x:x.time_updated, reverse=True)
+    results.sort(key=lambda x:x.name)
+
     return render_template("search.html",
                            is_logged_in=is_logged_in,
                            user=user,
@@ -254,7 +262,7 @@ def project(project_id_string):
         "tags": project.tags.replace(",", ", "),
         "description": project.get_description(),
         "download_info": download_info,
-        "share_links": share_links,
+        #"share_links": share_links,
         "comments": project.comments,
         "access_from_string": access_from_string,
         "access_descriptions": access_descriptions,
@@ -414,6 +422,8 @@ def upload_content(project_id_string):
             zipped_file = ZipFile(file_path, "r")
             zipped_file.extractall(path=webgl_folder)
         
+        project.update_time()
+
         current_time=get_current_time().strftime("%s")
         ajax_response= f'<iframe id="player" src="/project/{project.project_id}/webgl?t={current_time}" title="Player"></iframe>'
         return ajax_response
@@ -751,19 +761,16 @@ def editProject(project_id_string):
         authors = form.get("authors", "")
         if authors != "":
             project.set_authors(authors)
-            db.session.commit()
             return ", ".join(project.authors.split(","))
 
         description = form.get("description", "")
         if description != "":
             project.set_description(description)
-            db.session.commit()
             return "OK"
         
         tags = form.get("tags", "")
         if tags != "":
             project.set_tags(tags)
-            db.session.commit()
             return render_template("ajax_responses/paragraph_list.html", items=project.tags.split(","))
         
         thumbnail_file = request.files.get("thumbnail")

@@ -193,7 +193,7 @@ function ajaxChangeThumbnail(route){
         contentType: false,
         processData: false,
         success: function(data, status, xhr){
-            alert(data);
+            //alert(data);
             var date = new Date();
             var now = String(date.getTime());
             $("#thumbnail").attr("src",route+"/thumbnail?time="+now);

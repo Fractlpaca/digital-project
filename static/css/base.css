@@ -7,7 +7,7 @@ body{
 }
 
 div{
-    border-radius: 5px;
+    border-radius: 4px;
 }
 
 header{
@@ -67,10 +67,6 @@ h3{
     display: inline-block;
 }
 
-#nav input[type='text']{
-    background-color: rgba(255,255,255,0.1);
-}
-
 nav{
     display: inline-block;
 }
@@ -87,15 +83,6 @@ nav{
     margin: 5px 0px 0px 10px;
 }
 
-button{
-    background-color: #32c33d;
-    border-color: #5bc163;
-}
-
-button.cancel{
-    background-color: #9e9e9e;
-    border-color: #c1b05b
-}
 
 main.index{
     margin: auto;
@@ -125,20 +112,24 @@ input[type='number']{
     width: 50px;
 }
 
-button, input[type='submit']{
+button.submit, input[type='submit']{
     border-radius: 4px;
-}
-
-
-input[type='submit']{
     background-color: #228C2F ;
     border-color: #5bc163;
 }
 
-.delete{
+
+button.cancel{
+    background-color: #9e9e9e;
+    border-color: #c1b05b
+}
+
+
+button.delete{
     background-color: #ef6060;
     border-color: #987e58;
 }
+
 
 div.project_links{
     padding: 5px;
@@ -179,7 +170,7 @@ div.project_link:hover > button.delete{
 button.new{
     height: 30px;
     width: 100px;
-    background-color: #228C2F ;
+    background-color: #228C2F;
     border-color: #004A09;
     color: white;
 }
