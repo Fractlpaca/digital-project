@@ -1,0 +1,22 @@
+<div class='user_access' id="access_{{user_access.access_id}}">
+    <span><strong>{{user_access.user.name}}</strong> - {{access_descriptions[user_access.access_level]}}</span>
+    {% if access_level > user_access.access_level %}
+    <form method="POST" action="{{route}}/access" class='hidden' id='{{user_access.access_id}}-change-form'>
+        <input type='hidden' name='email' value='{{user_access.user.email}}'>
+        <select name="access_level" required>
+            {% for access_string in ["CAN_VIEW","CAN_COMMENT","CAN_EDIT","SUB_OWNER"] %}
+                {% if access_level > access_from_string[access_string] %}
+                <option value='{{access_string}}'>{{access_descriptions[access_from_string[access_string]]}}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+        <button type='button' onclick='show("{{user_access.access_id}}-change-button");hide("{{user_access.access_id}}-change-form")' class='cancel'>Cancel</button>
+        <button type='button' class="submit" onclick="ajaxAddAccess('{{route}}','{{user_access.access_id}}-change-form')">Change</button>
+    </form>
+        <div class='buttons' id='{{user_access.access_id}}-change-button'>
+            <button type='button' onclick='show("{{user_access.access_id}}-change-form");hide("{{user_access.access_id}}-change-button")'>Change Access</button>
+            <button type='button' class='delete' onclick="ajaxRemoveAccess('{{route}}','{{user_access.access_id}}')">Delete</button>
+        </div>
+    </form>
+    {% endif %}
+</div>

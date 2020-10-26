@@ -46,32 +46,31 @@
                 {% endblock %}
             </div>
             {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <div id="content_form" class="popup">
-                <button class='cancel' onclick = "hide('contentForm')">X</button>
+            <div id="upload_form_div" class="popup">
+                <button class='cancel' onclick = "hide('upload_form_div')">X</button>
                 <h3>Content</h3>
-                <form method='POST' enctype=multipart/form-data action='{{route}}/upload'>
+                <form id="upload_content_form" method='POST' enctype=multipart/form-data action='{{route}}/upload/content'>
                     <h4>WebGL Content</h4>
                     <select name='type' value='{{project.content_type}}' required>
                         <option value="game" selected>Game</option>
                     </select>
                     <input type='file' name='file' accept="application/zip" required>
-                    <input type='submit' value="Upload">
+                    <button type='button' class="submit" onclick="ajaxUploadContent()">Upload</button>
                 </form>
-                <form method='POST' enctype=multipart/form-data action='{{route}}/upload'>
+                <form id="upload_download_form" method='POST' enctype=multipart/form-data action='{{route}}/upload/download'>
                     <h4>New Download</h4>
-                    <input type="hidden" name='type' value='downloadable' required>
                     <input type='file' name='file' required>
                     <input type='text' name='filename' placeholder='File Name' title='Leave blank for original name'>
-                    <input type='submit' value="Upload">
+                    <button type='button' class="submit" onclick="ajaxUploadDownload()">Upload</button>
                 </form>
-                <button class='cancel' onclick = "document.getElementById('contentForm').style.display='none';">Cancel</button>
+                <button class='cancel' onclick = "hide('upload_form_div')">Cancel</button>
             </div>
-            <button onclick="show('contentForm')">Upload Content</button>
+            <button onclick="show('upload_form_div')">Upload Content</button>
             {% endif %}
-            <div id="downloads">
             <h4>{% if download_info | length == 0 %}No Downloads{% else %}Downloads{% endif %}</h4>
+            <div id="downloads">
             {% for filename, username, time in download_info%}
-            <div class='row'>
+            <!--<div class='row'>
                 <strong>{{filename}}</strong> - {{username}} - <i>{{time}}</i>
                 <form method="POST">
                     <input type="hidden" name="filename" value='{{filename}}'>
@@ -80,7 +79,8 @@
                     <input class='delete' type="submit" value="Delete" formaction="/project/{{project.project_id}}/deleteDownload">
                     {% endif %}
                 </form>
-            </div>
+            </div>-->
+            {% include "ajax_responses/download.html" %}
             {% endfor %}
             </div>
             
@@ -140,7 +140,7 @@
         {% endif %}
         <div id='comments'>
         {% for comment in comments|reverse %}
-        <div class='comment' id="comment_{{comment.comment_id}}">
+        <!--<div class='comment' id="comment_{{comment.comment_id}}">
             <div>
                 <img src='{{comment.user.profile_pic_url}}'></img><strong>{% if comment.user %}{{comment.user.name}}{% else %}unkown{% endif %}</strong>
                 {% if site_access >= 1 %}
@@ -149,7 +149,8 @@
                 <span>{{format_time_delta(current_time-comment.get_time_commented())}}</span>
             </div>
             <p>{{comment.text}}</p>
-        </div>
+        </div>-->
+        {% include "ajax_responses/comment.html" %}
         {% endfor %}
         </div>
         {% if comments|length == 0 %}
@@ -164,14 +165,14 @@
         <h3>Sharing</h3>
         <h4>Basic</h4>
         <form action='{{route}}/simpleShare' method="POST">
-            <select name='setting'>
+            <select name='setting' id='setting'>
                 <option value='private'>Private</option>
-                <option value='class'>Class View</option>
+                <option value='school'>School</option>
                 <option value='public'>Public</option>
             </select>
-            <input type='submit' value='Share'>
+            <button type='button' class='submit' onclick="ajaxSimpleShare('{{route}}')">Share</button>
         </form>
-        <h4>Link Sharing</h4>
+        <!--<h4>Link Sharing</h4>
         {% for share_link in share_links %}
             <p>{{url_for("invite",project_id_string=project.project_id, invite_string=share_link.url_string)}} grants: {{access_descriptions[share_link.access_level_granted]}}</p>
         {% endfor %}
@@ -193,16 +194,16 @@
             <input type="number" name="hours" value=0 min=0 max=23 size=3> Hours
             <input type="number" name="minutes" value=0 min=0 max=59 size=3> Minutes<br>
             <input type="submit" value="Create Link">
-        </form>
+        </form>-->
 
         <h4>Specific User Sharing</h4>
-        {% for user, user_access_level in access_pairs %}
-        <div class='user_access'>
-            <span><strong>{{user.name}}</strong> - {{access_descriptions[user_access_level]}}</span>
-            {% if access_level > user_access_level %}
-            <form method="POST" action="{{route}}/access">
-                <div class='hidden' id='{{user.email}}-change-form'>
-                    <input type='hidden' name='email' value='{{user.email}}'>
+        <div id="user_access_rows">
+        {% for user_access in user_permissions %}
+            <!--<div class='user_access' id="access_{{user_access.access_id}}">
+                <span><strong>{{user_access.user.name}}</strong> - {{access_descriptions[user_access.access_level]}}</span>
+                {% if access_level > user_access.access_level %}
+                <form method="POST" action="{{route}}/access" class='hidden' id='{{user_access.access_id}}-change-form'>
+                    <input type='hidden' name='email' value='{{user_access.user.email}}'>
                     <select name="access_level" required>
                         {% for access_string in ["CAN_VIEW","CAN_COMMENT","CAN_EDIT","SUB_OWNER"] %}
                             {% if access_level > access_from_string[access_string] %}
@@ -210,20 +211,22 @@
                             {% endif %}
                         {% endfor %}
                     </select>
-                    <button type='button' onclick='show("{{user.email}}-change-button");hide("{{user.email}}-change-form")' class='cancel'>Cancel</button>
-                    <input type='submit' value='Change'>
-                </div>
-                <div class='buttons' id='{{user.email}}-change-button'>
-                    <button type='button' onclick='show("{{user.email}}-change-form");hide("{{user.email}}-change-button")'>Change Access</button>
-                    <input formaction='{{route}}/deleteAccess' type='submit' value='Delete' class='delete'></p>
-                </div>
-            </form>
-            {% endif %}
-        </div>
+                    <button type='button' onclick='show("{{user_access.access_id}}-change-button");hide("{{user_access.access_id}}-change-form")' class='cancel'>Cancel</button>
+                    <button type='button' class="submit" onclick="ajaxAddAccess('{{route}}','{{user_access.access_id}}-change-form')">Change</button>
+                </form>
+                    <div class='buttons' id='{{user_access.access_id}}-change-button'>
+                        <button type='button' onclick='show("{{user_access.access_id}}-change-form");hide("{{user_access.access_id}}-change-button")'>Change Access</button>
+                        <button type='button' class='delete' onclick="ajaxRemoveAccess('{{route}}','{{user_access.access_id}}')">Delete</button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>-->
+            {% include "ajax_responses/access_row.html" %}
         {% endfor %}
+        </div>
 
-        <form method="POST" action="{{route}}/access">
-            Email: <input type="text" name="email">
+        <form method="POST" action="{{route}}/access" id="add_access_form">
+            Email: <input type="text" name="email" id="access_form_email" required>
             Access Level: <select name="access_level" required>
                 {% for access_string in ["CAN_VIEW","CAN_COMMENT","CAN_EDIT","SUB_OWNER"] %}
                     {% if access_level > access_from_string[access_string] %}
@@ -231,7 +234,7 @@
                     {% endif %}
                 {% endfor %}
             </select>
-            <input type="submit" value="New User">
+            <button type="button" class="submit" onclick="ajaxAddAccess('{{route}}','add_access_form')">New User</button>
         </form>
         <button class='cancel' onclick = "hide('sharing')">Cancel</button>
     </div>

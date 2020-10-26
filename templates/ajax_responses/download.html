@@ -1,0 +1,10 @@
+<div class='row' id='download_{{filename}}'>
+    <strong>{{filename}}</strong> - {{username}} - <i>{{time}}</i>
+    <form method="POST">
+        <!--<input type="hidden" name="filename" value='{{filename}}'>-->
+        <input type="submit" value="Download" formaction="/project/{{project.project_id}}/download">
+        {% if access_level >= access_from_string["CAN_EDIT"] %}
+        <button class='delete' type="button" onclick="ajaxRemoveDownload('{{route}}','{{filename}}')">Delete</button>
+        {% endif %}
+    </form>
+</div>

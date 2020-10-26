@@ -258,8 +258,9 @@ def project(project_id_string):
         "comments": project.comments,
         "access_from_string": access_from_string,
         "access_descriptions": access_descriptions,
-        "access_pairs": access_pairs
+        "user_permissions": project.user_permissions
     }
+    print(project.user_permissions,flush=True)
     content_type=project.content_type
     return render_template("content/game.html",
                            **base_template_args,
@@ -349,11 +350,11 @@ def deleteComment(project_id_string):
 
 
 
-@app.route("/project/<project_id_string>/upload", methods=["POST"])
+@app.route("/project/<project_id_string>/upload/content", methods=["POST"])
 @login_required
-def upload(project_id_string):
+def upload_content(project_id_string):
     """
-    Route for uploading downloadable files or playable content.
+    Route for uploading playable content.
     Restrictions: Authenticated, CAN_EDIT
     """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
@@ -362,51 +363,80 @@ def upload(project_id_string):
     
     route = f"/project/{project.project_id}"
     project_folder = os.path.join(PROJECTS_FOLDER, str(project.project_id))
-    if request.method == "POST":
-        content_type = request.form.get("type", None)
-        file = request.files.get("file",None)
-        if file is None or content_type is None:
-            return redirect(route)
-        if content_type == "game":
-            if file.mimetype != "application/zip":
-                return redirect(route)
-            webgl_folder = os.path.join(project_folder,"webgl")     
 
-            #Delete contents of webgl folder       
-            shutil.rmtree(webgl_folder, ignore_errors=True)
-            os.mkdir(webgl_folder)
+    content_type = request.form.get("type", None)
+    file = request.files.get("file",None)
+    if file is None or content_type is None:
+        return "Invalid input.", 400
+    if content_type == "game":
+        if file.mimetype != "application/zip":
+            return "WebGL content must be a zip file.", 400
+        webgl_folder = os.path.join(project_folder,"webgl")     
 
-            #Save zip file
-            file_path = os.path.join(webgl_folder, "webgl_game.zip")
-            file.save(file_path)
+        #Delete contents of webgl folder       
+        shutil.rmtree(webgl_folder, ignore_errors=True)
+        os.mkdir(webgl_folder)
 
-            #Extract files to webgl folder
-            if is_zipfile(os.path.join(webgl_folder, "webgl_game.zip")):
-                zipped_file = ZipFile(file_path, "r")
-                zipped_file.extractall(path=webgl_folder)
-            
-        elif content_type == "downloadable":
-            #Ensure downloads folder exists
-            download_folder = os.path.join(project_folder, "downloads")
-            if not os.path.exists(download_folder):
-                os.mkdir(download_folder)
+        #Save zip file
+        file_path = os.path.join(webgl_folder, "webgl_game.zip")
+        file.save(file_path)
 
-            # mimetype = file.mimetype.split("/")[1]
-            filename = request.form.get("filename", None)
-            # if filename.split(".")[-1] != mimetype:
-            #     filename += f".{mimetype}"
-            filename = secure_filename(filename or file.filename) 
-            filename = project.unique_download_filename(filename)
-            # print(f"Download named {filename}",flush=True)
-            
-            file_path = os.path.join(download_folder, filename)
-            file.save(file_path)
-            download_data = (filename, current_user.name, datetime.now(timezone.utc))
-            project.add_download_info(download_data)
+        #Extract files to webgl folder
+        if is_zipfile(os.path.join(webgl_folder, "webgl_game.zip")):
+            zipped_file = ZipFile(file_path, "r")
+            zipped_file.extractall(path=webgl_folder)
+        
+        current_time=get_current_time().strftime("%s")
+        ajax_response= f'<iframe id="player" src="/project/{project.project_id}/webgl?t={current_time}" title="Player"></iframe>'
+        return ajax_response
     
-    # AJAX needed.
-    return redirect(route)
+    return "Unknown content type.", 400
 
+
+@app.route("/project/<project_id_string>/upload/download", methods=["POST"])
+@login_required
+def upload_download(project_id_string):
+    """
+    Route for uploading downloadable files.
+    Restrictions: Authenticated, CAN_EDIT
+    """
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
+    if project is None:
+        abort(404)
+    
+    route = f"/project/{project.project_id}"
+    project_folder = os.path.join(PROJECTS_FOLDER, str(project.project_id))
+    file = request.files.get("file",None)
+    if file is None:
+        return "Invalid input.", 400
+    
+    #Ensure downloads folder exists
+    download_folder = os.path.join(project_folder, "downloads")
+    if not os.path.exists(download_folder):
+        os.mkdir(download_folder)
+
+    # mimetype = file.mimetype.split("/")[1]
+    filename = request.form.get("filename", None)
+    # if filename.split(".")[-1] != mimetype:
+    #     filename += f".{mimetype}"
+    filename = secure_filename(filename or file.filename) 
+    filename = project.unique_download_filename(filename)
+    # print(f"Download named {filename}",flush=True)
+    
+    file_path = os.path.join(download_folder, filename)
+    file.save(file_path)
+    download_data = (filename, current_user.name, datetime.now(timezone.utc))
+    project.add_download_info(download_data)
+    
+    return render_template( "ajax_responses/download.html",
+                            filename=filename,
+                            username=current_user.name,
+                            time="Less than a minute ago",
+                            access_level=access_level,
+                            access_from_string=access_from_string,
+                            project=project,
+                            route=route
+    )
 
 
 @app.route("/project/<project_id_string>/webgl",methods=["GET"])
@@ -422,8 +452,8 @@ def webGL(project_id_string):
     if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
         #The game files are missing.
         return "<i>Sorry, there is nothing to display.</i>"
-    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
-    return "Temporarily disabled"
+    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    #return "Temporarily disabled"
 
 
 
@@ -479,9 +509,7 @@ def deleteDownload(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
     if project is None:
         abort(404)
-    project.delete_download(request.form.get("filename",""))
-    # AJAX needed
-    return redirect(f"/project/{project.project_id}")
+    return project.delete_download(request.form.get("filename",""))
 
 
 
@@ -499,20 +527,30 @@ def projectAccess(project_id_string):
     route = f"/project/{project.project_id}"
     if request.form:
         added_email = request.form.get("email", None)
-        if added_email is not None:
-            added_user = Users.query.filter_by(email=added_email).first()
-            if added_user is not None:
-                existing_access = project.access_level(added_user)
-                if existing_access >= access_level:
-                    return redirect(route)
-                new_access = access_from_string.get(request.form.get("access_level", None),None)
-                if new_access is None:
-                    return redirect(route)
-                if new_access < NO_ACCESS or new_access > SUB_OWNER:
-                    return redirect(route)
-                project.assign_project_access(added_user.user_id, new_access)
-    # AJAX needed
-    return redirect(route)
+        if added_email is None:
+            return "Email input error.", 400
+        added_user = Users.query.filter_by(email=added_email).first()
+        if added_user is None:
+            return "User has not registered with that email.", 404
+        
+        existing_access = project.access_level(added_user)
+        if existing_access >= access_level:
+            return VIOLATION_ERROR
+        new_access = access_from_string.get(request.form.get("access_level", None),None)
+        if new_access is None:
+            return "Invalid access level.", 400
+        if new_access < NO_ACCESS or new_access > SUB_OWNER:
+            return "Invalid access level.", 400
+        user_access = project.assign_project_access(added_user.user_id, new_access)
+        return str(user_access.access_id) + render_template( "ajax_responses/access_row.html",
+            route=route,
+            access_level=access_level,
+            user_access=user_access,
+            access_descriptions=access_descriptions,
+            access_from_string=access_from_string)
+    
+    else:
+        return "Form not recieved, please reload."
 
 
 
@@ -528,18 +566,19 @@ def deleteProjectAccess(project_id_string):
         abort(404) 
     route = f"/project/{project.project_id}"
     if request.form:
-        added_email = request.form.get("email", None)
-        if added_email is not None:
-            added_user = Users.query.filter_by(email=added_email).first()
-            if added_user is not None:
-                existing_access = ProjectPermissions.query.filter_by(user_id=added_user.user_id,project_id=project.project_id).first()
-                if existing_access.access_level >= access_level:
-                    return redirect(route)
-                else:
-                    db.session.delete(existing_access)
-                    db.session.commit()
-    # AJAX needed
-    return redirect(route)
+        access_id = request.form.get("access_id", None)
+        if access_id is not None:
+            existing_access = ProjectPermissions.query.filter_by(access_id=access_id).first()
+            if existing_access is None:
+                return "Permission not found.", 404
+            if existing_access.access_level >= access_level:
+                return "You do not have permission to delete this access.", 403
+            else:
+                db.session.delete(existing_access)
+                db.session.commit()
+                return "OK"
+    
+    return "User not found.", 404
 
 
 
@@ -639,20 +678,24 @@ def simpleShare(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)
+    
     setting = request.form.get("setting", None)
-    if setting is not None:
+    if setting in ["private","school","public"]:
         if setting == "private":
             project.default_access=NO_ACCESS
             project.student_access=NO_ACCESS
-        elif setting == "class":
+        elif setting == "school":
             project.default_access=NO_ACCESS
             project.student_access=CAN_COMMENT
-        elif setting == "public":
+        else:
             project.default_access = CAN_VIEW
             project.student_access = CAN_COMMENT
-    db.session.commit()
-    # AJAX needed
-    return redirect(f"/project/{project.project_id}")
+        db.session.commit()
+        return {"private":"Project is now private.",
+            "public":"Project is now public.",
+            "school":"Project is now accessable to logged in users."}[setting]
+    else:
+        return "Invalid share setting.", 400
 
 
 
@@ -681,7 +724,7 @@ def editProject(project_id_string):
         if authors != "":
             project.set_authors(authors)
             db.session.commit()
-            return render_template("ajax_responses/paragraph_list.html", items=project.authors.split(","))
+            return ", ".join(project.authors.split(","))
 
         description = form.get("description", "")
         if description != "":

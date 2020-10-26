@@ -100,6 +100,7 @@ class Projects(db.Model):
         """
         Assigns or modifies access level of user given by user_id to be the given access level.
         The user cannot be the owner of the project.
+        Returns the modified or created ProjectPermissions object.
         """
         current_time = datetime.now(timezone.utc)
         existing_access = ProjectPermissions.query.filter_by(project_id=self.project_id, user_id=user_id).first()
@@ -114,6 +115,7 @@ class Projects(db.Model):
             existing_access.time_assigned = current_time
         self.update_time()  
         db.session.commit()
+        return existing_access or new_access
     
 
     def set_tags(self, tags):
@@ -257,6 +259,7 @@ class Projects(db.Model):
     def delete_download(self, filename):
         """
         Attemps to delete file with name 'filename' from the project's downloads folder.
+        Returns ajax response.
         """
         project_folder = os.path.join(PROJECTS_FOLDER, str(self.project_id))
         download_info=self.get_download_info()
@@ -277,8 +280,9 @@ class Projects(db.Model):
         download_folder = os.path.join(project_folder, "downloads")
         file_path = os.path.join(download_folder, filename)
         if not os.path.exists(file_path):
-            return
+            return "File not found", 404
         os.remove(file_path)
+        return "OK"
 
 
 
@@ -286,8 +290,9 @@ class ProjectPermissions(db.Model):
     __tablename__ = "project_permissions"
 
     #Columns
-    project_id = Column(Integer, ForeignKey("projects.project_id"), primary_key=True)
-    user_id = Column(String, ForeignKey("users.user_id"), primary_key=True)
+    access_id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey("projects.project_id"))
+    user_id = Column(String, ForeignKey("users.user_id"))
     access_level = Column(Integer)
     time_assigned = Column(DateTime)
 
