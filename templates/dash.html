@@ -2,6 +2,11 @@
 
 {% block title %}Dashboard{% endblock %}
 
+{% block head %}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="static/js/dash.js"></script>
+{% endblock %}
+
 {% block main %}
     {% if projects_owned | length > 0 %}   
         <h3>Your Projects</h3>
@@ -16,6 +21,7 @@
                 <a href='{{project.route()}}'><h3>{{project.name}}</h3></a>
                 <span>{{project.get_description()[:500]}}</span>
             </div>
+            <button class='delete' onclick="deleteProject('{{project.project_id}}','{{project.name}}')">Delete Project</button>
         </div>
     {% endfor %}
     <a href='{{url_for("newProject")}}'><button class='new'><strong>New Project</strong></button></a>

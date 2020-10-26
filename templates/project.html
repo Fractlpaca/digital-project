@@ -4,6 +4,8 @@
 
 {% block head %}
 <link rel='stylesheet' href='/static/css/project.css'>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="/static/js/project.js"></script>
 {% endblock %}
 
 {% block main_class %}project{% endblock %}
@@ -241,12 +243,6 @@
     </div>
     <button onclick="show('sharing')">Edit Sharing</button>
     {% endif %}
-    
-    
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="/static/js/project.js"></script>
-{% endblock %}
 
-{% block resize %}
-resizeContent();
+    <script>resizeContent();</script>
 {% endblock %}

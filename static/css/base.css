@@ -167,6 +167,15 @@ div.project_link div{
     margin: 5px;
 }
 
+div.project_link button.delete{
+    display: none;
+    float: right;
+}
+
+div.project_link:hover > button.delete{
+    display: inline;
+}
+
 button.new{
     height: 30px;
     width: 100px;

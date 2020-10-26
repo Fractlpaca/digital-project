@@ -391,7 +391,7 @@ def handle_project_id_string(project_id_string, threshold_access=CAN_VIEW):
     try:
         project_id=int(project_id_string)    
     except ValueError:
-        return (None, NO_ACCESS, is_logged_in)
+        abort(400)
     else:
         project = Projects.query.filter_by(project_id=project_id).first()
         if project is None:
@@ -401,6 +401,5 @@ def handle_project_id_string(project_id_string, threshold_access=CAN_VIEW):
         else:
             access_level = project.default_access
         if access_level < threshold_access:
-            abort(404)
-            #To prevent knoledge of existence of project
+            abort(403)
         return (project, access_level, is_logged_in)

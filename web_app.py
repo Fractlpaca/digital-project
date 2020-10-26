@@ -268,6 +268,34 @@ def project(project_id_string):
 
 
 
+@app.route("/deleteProject", methods=["POST"])
+@login_required
+def deleteProject():
+    """
+    Deletes given project on form submission.
+    Restrictions: OWNER
+    """
+
+    project_id_string = request.form.get("project_id",None)
+    print(project_id_string,flush=True)
+    if project_id_string is None:
+        abort(404)
+    
+    project, access_level, is_logged_in=handle_project_id_string(project_id_string, OWNER)
+    if project is None:
+        abort(404)
+    
+    db.session.delete(project)
+    db.session.commit()
+
+    project_folder = os.path.join(PROJECTS_FOLDER,str(project.project_id))
+    shutil.rmtree(project_folder)
+
+    return redirect(url_for("dashboard"))
+    
+
+
+
 @app.route("/project/<project_id_string>/thumbnail")
 def thumbnail(project_id_string):
     """
