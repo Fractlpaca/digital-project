@@ -761,9 +761,23 @@ if __name__ == "__main__":
         #Create session secret key
         generate_key(SECRET_KEY_FILENAME, 24)
     app.secret_key = get_key(SECRET_KEY_FILENAME)
+
     if not os.path.exists(file_location(database_file)):
         db.create_all()
-    
+
+    if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
+        if not os.path.exists(file_location("google_client_details.txt")):
+            exit("Google client details missing from environment and file.")
+        
+        try:
+            google_client_details_file = open("google_client_details.txt","r")
+            GOOGLE_CLIENT_ID = google_client_details_file.readline().strip()
+            GOOGLE_CLIENT_SECRET = google_client_details_file.readline().strip()
+        except:
+            exit("Error reading google client details file.")
+        
+        if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
+            exit("Invalid google client details.")
 
     app.run(ssl_context='adhoc', debug=True)
     #app.run(host="192.168.1.8", ssl_context='adhoc', debug=False)
