@@ -1,5 +1,6 @@
 #Ignore any secret keys
 *.dat
+google_client_details.txt
 #Ignore the database
 *.db
 #Ignore project and class files
