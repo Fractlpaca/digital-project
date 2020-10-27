@@ -1,9 +1,3 @@
-var contentWidth = 960;
-var contentHeight = 643;
-var content = document.getElementById("player");
-var contentContainer = document.getElementById("content");
-var contentRestrictor = document.getElementById("left")
-
 var OFFLINE_ERROR = "Could not complete request. Please try again later.";
 
 function hide(id){
@@ -18,12 +12,17 @@ function show(id){
 function resizeContent(event){
     //var targetWidth = $("#left").attr("clientWidth");
     var targetWidth = document.getElementById("left").clientWidth;
+    var $webglContainer = $("#player").contents().find("div.webgl-content");
+    var margin = parseFloat($("#player").contents().find("body").css("margin"));
+    var contentWidth=$webglContainer.outerWidth(true)+2*margin;
+    var contentHeight=$webglContainer.outerHeight(true)+2*margin;
+    //console.log(contentHeight, contentWidth);
     var scale = targetWidth / contentWidth;
     //content.style.setProperty("transform","scale("+scale+")");
     $("#player").css("transform","scale("+scale+")");
     //contentContainer.style.setProperty("height",contentHeight*scale + "px");
     $("#content").css("height",contentHeight*scale + "px");
-    console.log(contentHeight*scale + "px");
+    //console.log(contentHeight*scale + "px");
 }
 
 
@@ -267,6 +266,3 @@ function ajaxRemoveDownload(route, filename){
         });
     }
 }
-
-
-resizeContent();

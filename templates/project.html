@@ -8,6 +8,8 @@
 <script src="/static/js/project.js"></script>
 {% endblock %}
 
+{% block resize %}resizeContent(){% endblock %}
+
 {% block main_class %}project{% endblock %}
 {% block main %}
     <div id="titlebar">
@@ -244,5 +246,5 @@
     <button onclick="show('sharing')">Edit Sharing</button>
     {% endif %}
 
-    <script>resizeContent();</script>
+    <!--<script>resizeContent();</script>-->
 {% endblock %}

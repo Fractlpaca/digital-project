@@ -1,5 +1,5 @@
 {% extends "project.html" %}
 
 {% block content %}
-<iframe id="player" src="/project/{{project.project_id}}/webgl" title="Player"></iframe>
+<iframe id="player" src="/project/{{project.project_id}}/webgl" title="Player" onload='resizeContent()'></iframe>
 {% endblock %}
