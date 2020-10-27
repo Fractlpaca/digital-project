@@ -16,9 +16,10 @@ function resizeContent(event){
     var margin = parseFloat($("#player").contents().find("body").css("margin"));
     var contentWidth=$webglContainer.outerWidth(true)+2*margin;
     var contentHeight=$webglContainer.outerHeight(true)+2*margin;
-    //console.log(contentHeight, contentWidth);
     var scale = targetWidth / contentWidth;
+    console.log(contentHeight, contentWidth,scale);
     //content.style.setProperty("transform","scale("+scale+")");
+    $("#player").css({"width":contentWidth,"height":contentHeight});
     $("#player").css("transform","scale("+scale+")");
     //contentContainer.style.setProperty("height",contentHeight*scale + "px");
     $("#content").css("height",contentHeight*scale + "px");
