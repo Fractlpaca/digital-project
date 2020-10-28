@@ -490,8 +490,8 @@ def webGL(project_id_string):
     if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
         #The game files are missing.
         return "<i>Sorry, there is nothing to display.</i>"
-    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
-    #return "Temporarily disabled"
+    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    return "Temporarily disabled"
 
 
 
@@ -567,6 +567,8 @@ def projectAccess(project_id_string):
         added_email = request.form.get("email", None)
         if added_email is None:
             return "Email input error.", 400
+        if added_email == "":
+            return "Email may not be blank.", 400
         added_user = Users.query.filter_by(email=added_email).first()
         if added_user is None:
             return "User has not registered with that email.", 404

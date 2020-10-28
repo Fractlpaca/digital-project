@@ -1,12 +1,10 @@
 #titlebar{
     height: 70px;
-    background-color: #3c3c3c;
     padding: 2px;
     position: relative;
 }
 
 #titlebar h1{
-   color: #eee;
    margin: 5px 0px;
 }
 
@@ -55,7 +53,6 @@ main.project{
 div.container{
     position: relative;
     margin: 5px 0px;
-    background-color: #bbb;
 }
 
 div.left{
@@ -77,8 +74,6 @@ div.right{
     margin: 0px 0.5%;
     
     overflow-y: overlay;
-    
-    background-color: #228c2e;
 }
 
 div.right h3,div.right div{
@@ -114,35 +109,48 @@ div.right div{
     white-space: pre-line;
 }
 
+#tags p{
+    margin: 0px 0px 3px 0px;
+}
+
 div.row{
-    background-color: #2aad3a;
     margin: 4px 0px;
-    height: 32px;
+    padding: 5px;
+    position: relative;
 }
 
-div.row form{
+div.row span{
+    vertical-align: top;
+}
+
+div.row div.buttons{
     display: none;
-    float: right;
+    position: absolute;
+    right: 5px;
+    top: 5px;
 }
 
-div.row:hover > form{
+div.row > form{
+    position: absolute;
+    right: 5px;
+    top: 5px;
+}
+
+div.row:hover div.buttons{
     display: inline;
 }
 
-div.user_access .buttons{
-    display: none;
-    float: right;
-}
-
-div.user_access:hover .buttons{
-    display: inline;
+div.row img{
+    display: inline-block;
+    height: 28px;
+    border-radius: 14px;
+    margin: 1px 5px 0px 1px;
 }
 
 #comments_section{
     padding: 5px;
     margin: 5px 0px;
     width: 82%;
-    background-color: #2aad3a;
     position: relative;
 }
 
@@ -151,25 +159,20 @@ div.comment_options{
     height: 20px;
 }
 
-#new_comment{
-    background-color: white;
-}
-
 #comments_section button.submit{
     position: absolute;
     right: 0px;
 }
 
 div.comment{
-    background-color: #bbb;
     margin: 8px;
-    padding: 2px;
+    padding: 8px;
 }
 
 div.comment p{
     white-space: pre-line;
-    margin: 2px 0px 2px 0px;
-    background-color: #aaa;
+    margin: 2px;
+    padding: 2px;
 }
 
 div.comment div{
@@ -205,47 +208,42 @@ div.popup{
     top: 10%;
     bottom: 10%;
     right: 15%;
-    background-color: rgb(187 187 187 / 0.9);
-    border: 2px solid black;
+    border: 2px solid;
     border-radius: 10px;
     z-index: 100;
 }
 
-div.popup > div{
+#thumbnail_popup{
+    top: 40%;
+    bottom: 40%;
+}
+
+div.popup_container{
     position: absolute;
     top: 10px;
     left: 10px;
     right: 10px;
     bottom: 10px;
     overflow-y: overlay;
+    z-index: 101;
 }
 
-#tags p{
-    margin: 0px 0px 3px 0px;
-}
-
-div.user_access{
-    position: relative;
-    background-color: #aaa;
-    height: 30px;
-    margin: 6px 0px;
-    width: calc(100% - 20px);
-}
-
-div.user_access img{
-    float: left;
-    height: 28px;
-    border-radius: 14px;
-    margin: 1px 5px 0px 1px;
-}
-
-div.user_access form{
-    position: absolute;
-    right: 3px;
-    top: 3px;
-}
-
-div.popup button.cancel{
+div.popup > button.cancel{
     float: right;
     margin-right: 20px;
+}
+
+div.popup > div > button.cancel{
+    float: right;
+    margin-right: 20px;
+}
+
+div.cover{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 0;
+    z-index: 99;
 }
