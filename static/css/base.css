@@ -73,6 +73,7 @@ nav{
 #loginout{
     position: absolute;
     right: 10px;
+    text-align: right;
 }
 
 #loginout img{
@@ -83,7 +84,7 @@ nav{
 }
 
 
-main.index{
+main{
     margin: auto;
     width: 98%;
 }
@@ -113,6 +114,16 @@ input[type='number']{
 button, input[type='submit']{
     border-radius: 4px;
     display: inline-block;
+}
+
+div.titlebar{
+    height: 70px;
+    padding: 2px;
+    position: relative;
+}
+
+div.titlebar h1{
+   margin: 5px 0px;
 }
 
 div.project_links{

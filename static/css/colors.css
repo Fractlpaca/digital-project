@@ -57,11 +57,11 @@ button.new{
     color: white;
 }
 
-#titlebar{
+div.titlebar{
     background-color: #3c3c3c;
 }
 
-#titlebar h1{
+div.titlebar h1{
    color: #eee;
 }
 

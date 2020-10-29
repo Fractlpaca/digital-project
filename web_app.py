@@ -52,6 +52,9 @@ def login():
     Code taken from article: 'https://realpython.com/flask-google-login/'.
     Restrictions: None
     """
+    #Logout user:
+    logout_user()
+
     # Find out what URL to hit for Google login
     google_provider_cfg = get_google_provider_cfg()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
@@ -488,8 +491,8 @@ def webGL(project_id_string):
     if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
         #The game files are missing.
         return "<i>Sorry, there is nothing to display.</i>"
-    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
-    #return "Temporarily disabled"
+    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    return "Temporarily disabled"
 
 
 
@@ -772,18 +775,25 @@ def editProject(project_id_string):
         
         thumbnail_file = request.files.get("thumbnail")
 
+        new_thumbnail_path = os.path.join(project.folder(), "new_thumbnail")
         thumbnail_path = os.path.join(project.folder(), "thumbnail")
         if thumbnail_file is not None:
-            for extension in THUMBNAIL_EXTENSIONS:
-                if thumbnail_file.mimetype==f"image/{extension}":
-                    thumbnail_file.save(f"{thumbnail_path}")
-                    break
+            if thumbnail_file.mimetype.split("/")[1] in THUMBNAIL_EXTENSIONS:
+                thumbnail_file.save(new_thumbnail_path)
+                #Check size:
+                thumbnail_size = os.stat(new_thumbnail_path).st_size
+                if thumbnail_size > 1000 * 1000 * MAX_THUMBNAIL_SIZE_MB:
+                    #Size too large: delete thumbnail file.
+                    os.remove(new_thumbnail_path)
+                    return f"File too large (Max {MAX_THUMBNAIL_SIZE_MB}MB)", 413
+                else:
+                    #Commit file to thumbnail
+                    os.rename(new_thumbnail_path, thumbnail_path)
+                    project.update_time()
+                    return "OK"
             else:
                 #Thumbnail not saved.
                 return "Invalid file type.", 400
-            
-            project.update_time()
-            return "OK"
         
     
     return "Request not understood. Try reloading.", 400

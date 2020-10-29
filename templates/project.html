@@ -12,7 +12,7 @@
 
 {% block main_class %}project{% endblock %}
 {% block main %}
-    <div id="titlebar">
+    <div class="titlebar">
         <div id="title_div">
             <h1 id="title">{{project.name}}</h1>
             {% if access_level >= access_from_string["CAN_EDIT"] %}

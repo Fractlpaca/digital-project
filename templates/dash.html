@@ -8,8 +8,10 @@
 {% endblock %}
 
 {% block main %}
-    {% if projects_owned | length > 0 %}   
-        <h2>Your Projects</h2>
+    {% if projects_owned | length > 0 %}
+    <div class='titlebar'>
+        <h1>Your Projects</h1>
+    </div>
     {% endif %}
     <div class='project_links'>
     {% for project in projects_owned %}
@@ -27,7 +29,9 @@
     <a href='{{url_for("newProject")}}'><button class='new'><strong>New Project</strong></button></a>
     </div>
     {% if projects_shared | length > 0 %}
-        <h3>Projects Shared With You</h3>
+    <div class='titlebar'>
+        <h1>Projects Shared With You</h1>
+    </div>
     {% endif %}
     <div class='project_links'>
     {% for project in projects_shared %}

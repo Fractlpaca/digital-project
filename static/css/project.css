@@ -1,13 +1,3 @@
-#titlebar{
-    height: 70px;
-    padding: 2px;
-    position: relative;
-}
-
-#titlebar h1{
-   margin: 5px 0px;
-}
-
 div.centered{
     margin: auto;
 }
@@ -25,7 +15,7 @@ div.centered{
     display: none;
 }
 
-#titlebar img.thumbnail{
+div.titlebar img.thumbnail{
     position: absolute;
     top: 5%;
     right: 5px;
@@ -42,11 +32,6 @@ img.thumbnail:hover + #thumbnail_button{
 
 #thumbnail_button:hover{
     display: block;
-}
-
-main.project{
-    margin: auto;
-    width: 98%;
 }
 
 

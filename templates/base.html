@@ -36,7 +36,7 @@
         </div>
         <div id='loginout'>
             {% if is_logged_in %}
-            Logged in as <strong>{{user.name}}</strong>. <img src='{{user.profile_pic_url}}'></img><br>
+            Logged in as <strong>{{user.name}}</strong>. <img id='profile_pic' src='{{user.profile_pic_url}}'></img><br>
             <a href='{{url_for("logout")}}'>Logout</a>
             {% else %}
             Not logged in.<br>

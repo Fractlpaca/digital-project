@@ -1,11 +1,17 @@
 var OFFLINE_ERROR = "Could not complete request. Please try again later.";
 
+var MAX_THUMBNAIL_SIZE_MB = 0.5
+var MAX_DOWNLOAD_SIZE_MB = 20
+var MAX_CONTENT_SIZE_MB = 20
+
 function hide(id){
-    document.getElementById(id).style.display="none";
+    //document.getElementById(id).style.display="none";
+    $("#"+id).fadeOut(200);
 }
 
 function show(id){
-    document.getElementById(id).style.display="block";
+    //document.getElementById(id).style.display="block";
+    $("#"+id).fadeIn(500);
 }
 
 
@@ -201,7 +207,7 @@ function ajaxChangeThumbnail(route){
         error: function(xhr){
             if(xhr.readyState==4){
                 if(xhr.status==413){
-                    alert("File size is too large (Max 20MB)");
+                    alert("File size is too large (Max "+MAX_THUMBNAIL_SIZE_MB+"MB)");
                 }else{
                     alert(xhr.responseText);
                 }
@@ -227,7 +233,7 @@ function ajaxUploadDownload(route){
         error: function(xhr){
             if(xhr.readyState==4){
                 if(xhr.status==413){
-                    alert("File size is too large (Max 20MB)");
+                    alert("File size is too large (Max "+MAX_DOWNLOAD_SIZE_MB+"MB)");
                 }else{
                     alert(xhr.responseText);
                 }
@@ -255,7 +261,7 @@ function ajaxUploadContent(route){
         error: function(xhr){
             if(xhr.readyState==4){
                 if(xhr.status==413){
-                    alert("File size is too large (Max 20MB)");
+                    alert("File size is too large (Max 20"+MAX_CONTENT_SIZE_MB+"MB)");
                 }else{
                     alert(xhr.responseText);
                 }

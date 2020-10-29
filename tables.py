@@ -27,7 +27,7 @@ database_file = "sqlite:///{}".format(os.path.join(APP_DIR,"database.db")) #Get 
 app = Flask(__name__) #define app
 app.config["SQLALCHEMY_DATABASE_URI"] = database_file #give path of database to app
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * UPLOAD_MAX_SIZE_MB
+app.config["MAX_CONTENT_LENGTH"] = 1000 * 1000 * MAX_UPLOAD_SIZE_MB
 db = SQLAlchemy(app) #connect to database
 
 #Using user structure for flask_login:
