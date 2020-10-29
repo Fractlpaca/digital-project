@@ -67,6 +67,7 @@ def format_time_delta(time_delta):
 
 
 def file_location(path):
+    """Takes path from app directory and returns absolute path."""
     return os.path.join(APP_DIR, path)
 
 

@@ -54,40 +54,32 @@
             </div>
             {% if access_level >= access_from_string["CAN_EDIT"] %}
             <div id="upload_form_div" class="popup">
-                <button class='cancel' onclick = "hide('upload_form_div')">X</button>
-                <h3>Content</h3>
-                <form id="upload_content_form" method='POST' enctype=multipart/form-data action='{{route}}/upload/content'>
-                    <h4>WebGL Content</h4>
-                    <select name='type' value='{{project.content_type}}' required>
-                        <option value="game" selected>Game</option>
-                    </select>
-                    <input type='file' name='file' accept="application/zip" required>
-                    <button type='button' class="submit" onclick="ajaxUploadContent()">Upload</button>
-                </form>
-                <form id="upload_download_form" method='POST' enctype=multipart/form-data action='{{route}}/upload/download'>
-                    <h4>New Download</h4>
-                    <input type='file' name='file' required>
-                    <input type='text' name='filename' placeholder='File Name' title='Leave blank for original name'>
-                    <button type='button' class="submit" onclick="ajaxUploadDownload()">Upload</button>
-                </form>
-                <button class='cancel' onclick = "hide('upload_form_div')">Cancel</button>
+                <div class='cover' onclick="hide('upload_form_div')"></div>
+                <div class='popup_container'>
+                    <button class='cancel' onclick = "hide('upload_form_div')">X</button>
+                    <h3>Content</h3>
+                    <form id="upload_content_form" method='POST' enctype=multipart/form-data action='{{route}}/upload/content'>
+                        <h4>WebGL Content</h4>
+                        <select name='type' value='{{project.content_type}}' required>
+                            <option value="game" selected>Game</option>
+                        </select>
+                        <input type='file' name='file' accept="application/zip" required>
+                        <button type='button' class="submit" onclick="ajaxUploadContent()">Upload</button>
+                    </form><br>
+                    <form id="upload_download_form" method='POST' enctype=multipart/form-data action='{{route}}/upload/download'>
+                        <h4>New Download</h4>
+                        <input type='file' name='file' required>
+                        <input type='text' name='filename' placeholder='File Name' title='Leave blank for original name'>
+                        <button type='button' class="submit" onclick="ajaxUploadDownload()">Upload</button>
+                    </form>
+                </div>
             </div>
             <button onclick="show('upload_form_div')">Upload Content</button>
             {% endif %}
             <h4>{% if download_info | length == 0 %}No Downloads{% else %}Downloads{% endif %}</h4>
             <div id="downloads">
             {% for filename, username, time in download_info%}
-            <!--<div class='row'>
-                <strong>{{filename}}</strong> - {{username}} - <i>{{time}}</i>
-                <form method="POST">
-                    <input type="hidden" name="filename" value='{{filename}}'>
-                    <input type="submit" value="Download" formaction="/project/{{project.project_id}}/download">
-                    {% if access_level >= access_from_string["CAN_EDIT"] %}
-                    <input class='delete' type="submit" value="Delete" formaction="/project/{{project.project_id}}/deleteDownload">
-                    {% endif %}
-                </form>
-            </div>-->
-            {% include "ajax_responses/download.html" %}
+                {% include "ajax_responses/download.html" %}
             {% endfor %}
             </div>
             
@@ -172,6 +164,9 @@
             <button class='cancel' onclick = "hide('sharing')">X</button>
             <h3>Sharing</h3>
             <h4>Basic</h4>
+            <div id='share_info'>
+                {% include 'ajax_responses/share_info.html' %}
+            </div>
             <form action='{{route}}/simpleShare' method="POST">
                 <select name='setting' id='setting'>
                     <option></option>
@@ -179,7 +174,7 @@
                     <option value='school' title='People with an account at your school can view.'>School</option>
                     <option value='public' title='Anyone can view.'>Public</option>
                 </select>
-                <button type='button' class='submit' onclick="ajaxSimpleShare('{{route}}')">Share</button>
+                <button type='button' class='submit' onclick="ajaxSimpleShare('{{route}}')">Publish</button>
             </form>
             <!--<h4>Link Sharing</h4>
             {% for share_link in share_links %}

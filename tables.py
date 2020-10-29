@@ -26,6 +26,8 @@ database_file = "sqlite:///{}".format(os.path.join(APP_DIR,"database.db")) #Get 
 
 app = Flask(__name__) #define app
 app.config["SQLALCHEMY_DATABASE_URI"] = database_file #give path of database to app
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * UPLOAD_MAX_SIZE_MB
 db = SQLAlchemy(app) #connect to database
 
 #Using user structure for flask_login:
@@ -68,7 +70,9 @@ class Projects(db.Model):
     student_access = Column(Integer, default=PROJECT_STUDENT_ACCESS)
     time_created = Column(DateTime)
     time_updated = Column(DateTime)
+    #Comma seperated tags
     tags = Column(Text(), default="")
+    #Comma seperated authors
     authors = Column(Text(), default="")
     content_type = Column(Text(), default="none", nullable=False)
     
@@ -78,17 +82,18 @@ class Projects(db.Model):
     comments = relationship("Comments", back_populates="project")
     owner = relationship("Users", back_populates="projects_owned")
     
+
     def route(self): return f"/project/{str(self.project_id)}"
-    def folder(self): return f"projects/{self.project_id}"
     def thumbnail_route(self): return f"/project/{self.project_id}/thumbnail"
-    
+    def folder(self): return os.path.join(PROJECTS_FOLDER, str(self.project_id))
+
 
     def get_download(self, filename):
         """
         Returns the send_from_directory file with name 'filename' if the file exists in the
         project's downloads folder, else None.
         """
-        project_folder = os.path.join(PROJECTS_FOLDER, str(self.project_id))
+        project_folder = self.folder()
         download_folder = os.path.join(project_folder, "downloads")
         file_path = os.path.join(download_folder, filename)
         if not os.path.exists(file_path):
@@ -105,16 +110,18 @@ class Projects(db.Model):
         current_time = datetime.now(timezone.utc)
         existing_access = ProjectPermissions.query.filter_by(project_id=self.project_id, user_id=user_id).first()
         if existing_access is None:
+            #Create new permission
             new_access = ProjectPermissions(project_id=self.project_id,
                                                 user_id=user_id,
                                                 access_level=access_level,
                                                 time_assigned=current_time)
             db.session.add(new_access)
         elif existing_access.access_level != access_level and existing_access.access_level < OWNER:
+            #Update the access level and time assigned.
             existing_access.access_level = access_level
             existing_access.time_assigned = current_time
-        #self.update_time()  
         db.session.commit()
+        #If a permission already existed, return modified access, else return new access.
         return existing_access or new_access
     
 
@@ -137,6 +144,8 @@ class Projects(db.Model):
         Authors are stored as a comma-separated strings from the 'authors' list.
         """
         author_list = set(author.strip() for author in authors.split(","))
+        if "" in tag_set:
+            tag_set.remove("")
         self.authors=','.join(sorted(author_list))
         db.session.commit()
         self.update_time()   
@@ -153,19 +162,13 @@ class Projects(db.Model):
             return OWNER
         elif user.site_access == MOD:
             return CAN_COMMENT
+        
+        #Attempt to find project access:
         project_access = ProjectPermissions.query.filter_by(project_id=self.project_id,
                                                                 user_id=user.user_id).first()
         if project_access is None:
             return max(self.student_access, self.default_access)
         return max(self.student_access,self.default_access,project_access.access_level)
-    
-
-    def user_access_pairs(self):
-        """Returns list of tuples (user object, access_level) sorted by access level decreasing,
-        then by username lexographically."""
-        print("    " + str(self.user_permissions),flush=True)
-        print(self.user_permissions[0].user_id)
-        return sorted([(access.user,access.access_level) for access in self.user_permissions],key=lambda x: (-x[1],x[0].name))
     
 
     def update_time(self):
@@ -179,7 +182,7 @@ class Projects(db.Model):
         """
         Returns text from the 'description.txt' file in the project folder.
         """
-        project_dir = os.path.join(PROJECTS_FOLDER,str(self.project_id))
+        project_dir = self.folder()
         description_file = os.path.join(project_dir,"description.txt")
         if not os.path.exists(description_file):
             return ""
@@ -194,7 +197,7 @@ class Projects(db.Model):
         """
         Writes text to 'description.txt' file in project folder.
         """
-        project_dir = os.path.join(PROJECTS_FOLDER,str(self.project_id))
+        project_dir = self.folder()
         description_file = os.path.join(project_dir,"description.txt")
         file = open(description_file, "w")
         file.write(text)
@@ -205,8 +208,9 @@ class Projects(db.Model):
     def add_download_info(self, download_info):
         """Takes  download_info 3-tuple, writes to download info file."""
         filename, username, time = download_info
-        time = datetime.strftime(time, TIME_FORMAT)
-        project_folder = os.path.join(PROJECTS_FOLDER, str(self.project_id))
+        #Format time to string
+        time = time_to_string(time)
+        project_folder = self.folder()
         log_name = os.path.join(project_folder, "downloads.txt")
         try:
             download_log = open(log_name, "a")
@@ -218,26 +222,25 @@ class Projects(db.Model):
 
     def get_download_info(self):
         """Returns set of 3-tuples, (filename, username, time) from download log."""
-        project_folder = os.path.join(PROJECTS_FOLDER, str(self.project_id))
+        project_folder = self.folder()
         log_name = os.path.join(project_folder, "downloads.txt")
         try:
             download_log = open(log_name, "r")
         except:
             return set()
-        else:
-            log_text = download_log.readlines()
-            download_log.close()
-            file_list = set()
-            for entry in log_text:
-                try:
-                    file_name, username, time = entry.strip().split(",")
-                except ValueError:
-                    continue
-                else:
-                    print(time, flush=True)
-                    time = string_to_time(time)
-                    file_list.add((file_name, username, time))
-            return file_list
+        
+        log_text = download_log.readlines()
+        download_log.close()
+        file_set = set()
+        for entry in log_text:
+            try:
+                filename, username, time = entry.strip().split(",")
+            except ValueError:
+                continue
+            else:
+                time = string_to_time(time)
+                file_set.add((filename, username, time))
+        return file_set
 
 
     def unique_download_filename(self, filename):
@@ -245,15 +248,14 @@ class Projects(db.Model):
         Returns a secure filename based on given filename
         which does not already exist in the project's downloads folder.
         """
-        new_filename = filename
+        new_filename = secure_filename(filename)
         existing_filenames = set(line[0] for line in self.get_download_info())
-        print(existing_filenames,flush=True)
         split_filename = filename.split(".")
         first_name = split_filename[0]
         extensions = ".".join(split_filename[1:])
-        counter = 0
+        counter = 1
         while new_filename in existing_filenames:
-            new_filename = secure_filename(f"{first_name} {counter}.{extensions}")
+            new_filename = secure_filename(f"{first_name}{counter}.{extensions}")
             counter+=1
         return new_filename
 
@@ -263,22 +265,28 @@ class Projects(db.Model):
         Attemps to delete file with name 'filename' from the project's downloads folder.
         Returns ajax response.
         """
-        project_folder = os.path.join(PROJECTS_FOLDER, str(self.project_id))
+        project_folder = self.folder()
         download_info=self.get_download_info()
         for entry in download_info:
             if entry[0]==filename:
                 download_info.remove(entry)
                 break
         log_name = os.path.join(project_folder, "downloads.txt")
+
+        #Rewrite download log
         download_log = open(log_name, "w")
         for entry in download_info:
             try:
                 filename, username, time = entry
+                time = time_to_string(time)
             except ValueError:
                 continue
+            except AttributeError:
+                continue
             else:
-                download_log.write(f"{filename},{username},{time.strftime(TIME_FORMAT)}\r\n")
+                download_log.write(f"{filename},{username},{time}\r\n")
         download_log.close()
+
         download_folder = os.path.join(project_folder, "downloads")
         file_path = os.path.join(download_folder, filename)
         if not os.path.exists(file_path):
@@ -395,15 +403,18 @@ def handle_project_id_string(project_id_string, threshold_access=CAN_VIEW):
     try:
         project_id=int(project_id_string)    
     except ValueError:
+        #project_id was not valid
         abort(400)
     else:
         project = Projects.query.filter_by(project_id=project_id).first()
         if project is None:
+            #Project with given id does not exist.
             abort(404)
         if is_logged_in:
             access_level = project.access_level(current_user)
         else:
             access_level = project.default_access
         if access_level < threshold_access:
+            #Access denied
             abort(403)
         return (project, access_level, is_logged_in)

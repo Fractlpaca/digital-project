@@ -171,7 +171,7 @@ function ajaxRemoveAccess(route, access_id){
 function ajaxSimpleShare(route){
     var newSetting = $("#setting").val();
     $.post(route+"/simpleShare", {setting: newSetting}, function(data, status){
-        alert(data);
+        $("#share_info").html(data);
         //alert(newDescription);
         //alert(data);
     }).fail(function(xhr){
@@ -200,7 +200,11 @@ function ajaxChangeThumbnail(route){
         },
         error: function(xhr){
             if(xhr.readyState==4){
-                alert(xhr.responseText);
+                if(xhr.status==413){
+                    alert("File size is too large (Max 20MB)");
+                }else{
+                    alert(xhr.responseText);
+                }
             }else{
                 alert(OFFLINE_ERROR)
             }
@@ -222,7 +226,11 @@ function ajaxUploadDownload(route){
         },
         error: function(xhr){
             if(xhr.readyState==4){
-                alert(xhr.responseText);
+                if(xhr.status==413){
+                    alert("File size is too large (Max 20MB)");
+                }else{
+                    alert(xhr.responseText);
+                }
             }else{
                 alert(OFFLINE_ERROR)
             }
@@ -246,7 +254,11 @@ function ajaxUploadContent(route){
         },
         error: function(xhr){
             if(xhr.readyState==4){
-                alert(xhr.responseText);
+                if(xhr.status==413){
+                    alert("File size is too large (Max 20MB)");
+                }else{
+                    alert(xhr.responseText);
+                }
             }else{
                 alert(OFFLINE_ERROR)
             }

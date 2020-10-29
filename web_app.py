@@ -36,6 +36,7 @@ def index():
     """
     is_logged_in = current_user.is_authenticated
     user = current_user if is_logged_in else None
+    #Filter projects by public projects and sort by activity: latest first.
     public_projects = Projects.query.filter(Projects.default_access>=CAN_VIEW).order_by(Projects.time_updated.desc()).all()
     return render_template("index.html",
                            is_logged_in=is_logged_in,
@@ -112,7 +113,6 @@ def login_callback():
         #    return "Account not allowed.", 400
         picture = userinfo_response.json()["picture"]
         users_name = userinfo_response.json()["name"]
-        print(userinfo_response.json(),flush=True)
     else:
         return "User email not available or not verified by Google.", 400
 
@@ -133,6 +133,7 @@ def login_callback():
     #Log user in
 
     login_user(user, remember=True)
+    #Redirect to user's dashboard.
     return redirect(url_for("dashboard"))
 
 
@@ -159,19 +160,23 @@ def dashboard():
     projects_owned = current_user.projects_owned
     #Sort projects by latest first
     projects_owned.sort(key=lambda x:x.time_updated, reverse=True)
-    #Filter projects
+    
+    #Filter project permissions for shared projects
     projects_shared = ProjectPermissions.query.filter(ProjectPermissions.user_id==user_id, CAN_VIEW <= ProjectPermissions.access_level, ProjectPermissions.access_level< OWNER).all()
+    
     #Extract projects from project permissions
     projects_shared = [project_access.project for project_access in projects_shared]
+    
     #Sort projects by latest first
     projects_shared.sort(key=lambda x:x.time_updated, reverse=True)
+    
     #Public projects
-    other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).order_by(Projects.time_updated.desc()).all()
+    #other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).order_by(Projects.time_updated.desc()).all()
     return render_template("dash.html",
                            user=current_user,
                            projects_owned=projects_owned,
                            projects_shared = projects_shared,
-                           other_projects = other_projects,
+                           #other_projects = other_projects,
                            is_logged_in=True)
 
 
@@ -236,8 +241,6 @@ def project(project_id_string):
     if project is None:
         abort(404)
     route=f"/project/{project.project_id}"
-    #Sorted pairs of users and permissions for sharing
-    access_pairs = project.user_access_pairs()
     download_info = list(project.get_download_info())
     current_time=get_current_time()
     #Sort download info by most recent first, then alphabetical, then uploader name
@@ -268,7 +271,6 @@ def project(project_id_string):
         "access_descriptions": access_descriptions,
         "user_permissions": project.user_permissions
     }
-    print(project.user_permissions,flush=True)
     content_type=project.content_type
     return render_template("content/game.html",
                            **base_template_args,
@@ -285,7 +287,6 @@ def deleteProject():
     """
 
     project_id_string = request.form.get("project_id",None)
-    print(project_id_string,flush=True)
     if project_id_string is None:
         abort(404)
     
@@ -296,7 +297,7 @@ def deleteProject():
     db.session.delete(project)
     db.session.commit()
 
-    project_folder = os.path.join(PROJECTS_FOLDER,str(project.project_id))
+    project_folder = project.folder()
     shutil.rmtree(project_folder)
 
     return redirect(url_for("dashboard"))
@@ -315,8 +316,8 @@ def thumbnail(project_id_string):
         abort(404)
     #Check for thumbnails in project folder.
     for extension in THUMBNAIL_EXTENSIONS:
-        if os.path.exists(f"projects/{project.project_id}/thumbnail.{extension}"):
-            return send_from_directory(f"projects/{project.project_id}", f"thumbnail.{extension}")
+        if os.path.exists(f"projects/{project.project_id}/thumbnail"):
+            return send_from_directory(f"projects/{project.project_id}","thumbnail")
     #Return default thumbnail if thumbnail not found
     return send_from_directory(f"static/images","default_thumbnail.png")
 
@@ -398,7 +399,7 @@ def upload_content(project_id_string):
         abort(404)
     
     route = f"/project/{project.project_id}"
-    project_folder = os.path.join(PROJECTS_FOLDER, str(project.project_id))
+    project_folder = project.folder()
 
     content_type = request.form.get("type", None)
     file = request.files.get("file",None)
@@ -443,23 +444,20 @@ def upload_download(project_id_string):
         abort(404)
     
     route = f"/project/{project.project_id}"
-    project_folder = os.path.join(PROJECTS_FOLDER, str(project.project_id))
+    project_folder = project.folder()
     file = request.files.get("file",None)
     if file is None:
         return "Invalid input.", 400
-    
+
+
     #Ensure downloads folder exists
     download_folder = os.path.join(project_folder, "downloads")
     if not os.path.exists(download_folder):
         os.mkdir(download_folder)
 
-    # mimetype = file.mimetype.split("/")[1]
     filename = request.form.get("filename", None)
-    # if filename.split(".")[-1] != mimetype:
-    #     filename += f".{mimetype}"
     filename = secure_filename(filename or file.filename) 
     filename = project.unique_download_filename(filename)
-    # print(f"Download named {filename}",flush=True)
     
     file_path = os.path.join(download_folder, filename)
     file.save(file_path)
@@ -490,8 +488,8 @@ def webGL(project_id_string):
     if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
         #The game files are missing.
         return "<i>Sorry, there is nothing to display.</i>"
-    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
-    return "Temporarily disabled"
+    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    #return "Temporarily disabled"
 
 
 
@@ -504,7 +502,7 @@ def gamedata(project_id_string, folder, path):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
-    project_dir = os.path.join(PROJECTS_FOLDER, str(project.project_id))
+    project_dir = project.folder()
     content_dir = os.path.join(project_dir,"webgl")
     #Only the folders provided by the game build may be accessed.
     if folder not in ["TemplateData", "Build"]: abort(404)
@@ -527,7 +525,7 @@ def download(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
-    project_dir = os.path.join(PROJECTS_FOLDER, str(project.project_id))    
+    project_dir = project.folder()   
     download_folder = os.path.join(PROJECTS_FOLDER,"downloads")
     download = project.get_download(request.form.get("filename",""))
     if download is None:
@@ -731,9 +729,7 @@ def simpleShare(project_id_string):
             project.default_access = CAN_VIEW
             project.student_access = CAN_COMMENT
         db.session.commit()
-        return {"private":"Project is now private.",
-            "public":"Project is now public.",
-            "school":"Project is now accessable to logged in users."}[setting]
+        return render_template('ajax_responses/share_info.html', project=project, access_descriptions=access_descriptions)
     else:
         return "Invalid share setting.", 400
 
@@ -750,7 +746,6 @@ def editProject(project_id_string):
     if project is None:
         abort(404)
     
-    print("Request is ",request, flush=True)
     if request.method == "POST":
         form = request.form
         title = form.get("title", "")
@@ -776,14 +771,18 @@ def editProject(project_id_string):
             return render_template("ajax_responses/paragraph_list.html", items=project.tags.split(","))
         
         thumbnail_file = request.files.get("thumbnail")
-        thumbnail_path = os.path.join(PROJECTS_FOLDER,str(project.project_id))
-        thumbnail_path = os.path.join(thumbnail_path, "thumbnail")
+
+        thumbnail_path = os.path.join(project.folder(), "thumbnail")
         if thumbnail_file is not None:
             for extension in THUMBNAIL_EXTENSIONS:
                 if thumbnail_file.mimetype==f"image/{extension}":
-                    thumbnail_file.save(f"{thumbnail_path}.{extension}")
+                    thumbnail_file.save(f"{thumbnail_path}")
+                    break
+            else:
+                #Thumbnail not saved.
+                return "Invalid file type.", 400
+            
             project.update_time()
-            #return redirect(f"/project/{project.project_id}")
             return "OK"
         
     
@@ -808,13 +807,15 @@ if __name__ == "__main__":
         
         try:
             google_client_details_file = open("google_client_details.txt","r")
-            GOOGLE_CLIENT_ID = google_client_details_file.readline().strip()
-            GOOGLE_CLIENT_SECRET = google_client_details_file.readline().strip()
+            GOOGLE_CLIENT_ID = google_client_details_file.readline().strip().rstrip()
+            GOOGLE_CLIENT_SECRET = google_client_details_file.readline().strip().rstrip()
         except:
             exit("Error reading google client details file.")
         
         if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
             exit("Invalid google client details.")
+    
+    #print(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,flush=True)
 
     app.run(ssl_context='adhoc', debug=True)
     #app.run(host="192.168.1.8", ssl_context='adhoc', debug=False)

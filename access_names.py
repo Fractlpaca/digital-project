@@ -6,7 +6,6 @@ Access level constants to be used in access level columns of database.
 
 BANNED = -1 #Has been manually banned
 NO_ACCESS = 0 #Invisible
-CAN_SEE = 1 #Contents not viewable
 CAN_VIEW = 2
 CAN_COMMENT = 3
 CAN_EDIT = 5
@@ -16,7 +15,6 @@ OWNER = 7 #Original creator of object
 access_from_string={
     "BANNED": BANNED,
     "NO_ACCESS": NO_ACCESS,
-    "CAN_SEE": CAN_SEE,
     "CAN_VIEW": CAN_VIEW,
     "CAN_COMMENT": CAN_COMMENT,
     "CAN_EDIT": CAN_EDIT,
@@ -26,8 +24,7 @@ access_from_string={
 
 access_messages = {
     BANNED: "You have been banned from viewing this project.",
-    NO_ACCESS: "Invisible. Cease and desist.",
-    CAN_SEE: "You do not have access to view this content.",
+    NO_ACCESS: "Cease and desist.",
     CAN_VIEW: "View only.",
     CAN_COMMENT: "Commenting enabled.",
     CAN_EDIT: "You may edit this content.",
@@ -37,8 +34,7 @@ access_messages = {
 
 access_descriptions = {
     BANNED: "Totaly Banned",
-    NO_ACCESS: "Completly Oblivious",
-    CAN_SEE: "Cannot View",
+    NO_ACCESS: "No Access",
     CAN_VIEW: "View Only",
     CAN_COMMENT: "View and Comment",
     CAN_EDIT: "Collaborator",

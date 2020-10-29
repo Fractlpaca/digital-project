@@ -6,7 +6,7 @@
             <button type="submit" formaction="/project/{{project.project_id}}/download">Download</button>
         </form>
         {% if access_level >= access_from_string["CAN_EDIT"] %}
-            <button class='delete' type="button" onclick="ajaxRemoveDownload('{{route}}','{{filename}}')">Delete</button>
+            <button class='delete' type="button" onclick="ajaxRemoveDownload('{{route}}','{{filename}}')">Remove</button>
         {% endif %}
     </div>
 </div>
