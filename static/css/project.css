@@ -24,6 +24,15 @@ div.titlebar img.thumbnail{
 
 #thumbnail_button{
     display: none;
+    position: absolute;
+    top: 5%;
+    right: 5px;
+    height: 90%;
+    text-align: center;
+}
+
+#thumbnail_button span{
+    line-height: 60px;
 }
 
 img.thumbnail:hover + #thumbnail_button{
@@ -210,6 +219,7 @@ div.popup_container{
     right: 10px;
     bottom: 10px;
     overflow-y: overlay;
+    padding-right: 20px;
     z-index: 101;
 }
 

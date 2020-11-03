@@ -1,0 +1,6 @@
+<div class='row' id='share_link_{{share_link.url_string}}'>
+    {{url_for("invite",project_id_string=project.project_id, invite_string=share_link.url_string)}} Grants: {{access_descriptions[share_link.access_level_granted]}}
+    <div class='buttons'>
+        <button type='button' class='delete' onclick="ajaxRemoveShareLink('{{route}}','{{share_link.url_string}}')">Remove</button>
+    </div>
+</div>

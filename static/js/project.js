@@ -34,6 +34,11 @@ function resizeContent(event){
 
 
 
+function resizeThumbnail(event){
+    $('#thumbnail_button').css("width",$("#thumbnail").css("width"));
+}
+
+
 function ajaxEditTitle(route){
     var newName = $("#title_input").val();
     console.log(newName);
@@ -174,6 +179,48 @@ function ajaxRemoveAccess(route, access_id){
     }
 }
 
+function ajaxAddShareLink(route){
+    $.ajax({
+        url: $("#share_link_form").attr("action"),
+        //contentType: "multipart/form-data",
+        type: "POST",
+        data: new FormData(document.getElementById("share_link_form")),
+        contentType: false,
+        processData: false,
+        success: function(data, status){
+            //alert(data);
+            var start_index = data.indexOf("<");
+            var share_link_url = data.slice(0, start_index);
+            $("#share_link_"+String(share_link_url)).remove();
+            var html_data = data.slice(start_index);
+            $("#share_link_rows").prepend(html_data);
+            document.getElementById("share_link_form").reset();
+        },
+        error: function(xhr){
+            if(xhr.readyState==4){
+                alert(xhr.responseText);
+            }else{
+                alert(OFFLINE_ERROR)
+            }
+        }
+    });
+}
+
+function ajaxRemoveShareLink(route, share_link_url){
+    if(confirm("Remove Link?")){
+        $.post(route+"/deleteShareLink", {share_link_url: share_link_url}, function(data, status){
+            //alert(data);
+            $("#share_link_"+String(share_link_url)).remove();
+        }).fail(function(xhr){
+            if(xhr.readyState==4){
+                alert(xhr.responseText);
+            }else{
+                alert(OFFLINE_ERROR)
+            }
+        });
+    }
+}
+
 function ajaxSimpleShare(route){
     var newSetting = $("#setting").val();
     $.post(route+"/simpleShare", {setting: newSetting}, function(data, status){
@@ -203,6 +250,7 @@ function ajaxChangeThumbnail(route){
             var date = new Date();
             var now = String(date.getTime());
             $("#thumbnail").attr("src",route+"/thumbnail?time="+now);
+            resizeThumbnail();
         },
         error: function(xhr){
             if(xhr.readyState==4){
