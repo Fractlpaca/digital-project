@@ -7,7 +7,7 @@ div.centered{
 }
 
 #title{
-   display: inline-block; 
+   display: inline-block;
    margin-left: 10px;
 }
 
@@ -33,6 +33,7 @@ div.titlebar img.thumbnail{
 
 #thumbnail_button span{
     line-height: 60px;
+    cursor: default;
 }
 
 img.thumbnail:hover + #thumbnail_button{
@@ -66,7 +67,7 @@ div.right{
     right: 0px;
     bottom: 5px;
     margin: 0px 0.5%;
-    
+
     overflow-y: overlay;
 }
 
