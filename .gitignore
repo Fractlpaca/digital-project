@@ -6,3 +6,4 @@ google_client_details.txt
 #Ignore project and class files
 /projects/*
 /classes/*
+/__pycache__/*
