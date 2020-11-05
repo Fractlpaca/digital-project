@@ -491,8 +491,8 @@ def webGL(project_id_string):
     if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
         #The game files are missing.
         return "<i>Sorry, there is nothing to display.</i>"
-    #return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
-    return "Temporarily disabled"
+    return send_from_directory(f"{PROJECTS_FOLDER}/{project.project_id}/webgl","index.html")
+    #return "Temporarily disabled"
 
 
 
