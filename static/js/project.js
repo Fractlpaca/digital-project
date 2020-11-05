@@ -1,8 +1,8 @@
 var OFFLINE_ERROR = "Could not complete request. Please try again later.";
 
-var MAX_THUMBNAIL_SIZE_MB = 0.5
-var MAX_DOWNLOAD_SIZE_MB = 20
-var MAX_CONTENT_SIZE_MB = 20
+var MAX_THUMBNAIL_SIZE_MB = 0.4
+var MAX_DOWNLOAD_SIZE_MB = 10
+var MAX_CONTENT_SIZE_MB = 10
 
 function hide(id){
     //document.getElementById(id).style.display="none";
@@ -128,7 +128,7 @@ function ajaxRemoveComment(route, comment_id){
     if(confirm("Permanantly delete comment?")){
         $.post(route+"/deleteComment", {comment_id: comment_id}, function(data, status){
             $("#comment_"+String(comment_id)).remove();
-            
+
         }).fail(function(xhr){
             if(xhr.readyState==4){
                 alert(xhr.responseText);

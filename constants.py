@@ -26,8 +26,8 @@ GOOGLE_DISCOVERY_URL = ("https://accounts.google.com/.well-known/openid-configur
 VIOLATION_ERROR = ("You do not have permission to perform this request.", 403)
 
 #Max file sizes in megabytes:
-MAX_THUMBNAIL_SIZE_MB = 0.5
-MAX_CONTENT_SIZE_MB = 20
-MAX_DOWNLOAD_SIZE_MB = 20
+MAX_THUMBNAIL_SIZE_MB = 0.4
+MAX_CONTENT_SIZE_MB = 10
+MAX_DOWNLOAD_SIZE_MB = 10
 
 MAX_UPLOAD_SIZE_MB = max(MAX_THUMBNAIL_SIZE_MB, MAX_CONTENT_SIZE_MB, MAX_DOWNLOAD_SIZE_MB)
