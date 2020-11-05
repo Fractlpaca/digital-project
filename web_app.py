@@ -834,11 +834,9 @@ def editProject(project_id_string):
     return "Request not understood. Try reloading.", 400
 
 
+#Setup and read neccessary files
 
-
-
-if __name__ == "__main__":
-    if not os.path.exists(file_location(SECRET_KEY_FILENAME)):
+if not os.path.exists(file_location(SECRET_KEY_FILENAME)):
         #Create session secret key
         generate_key(SECRET_KEY_FILENAME, 24)
     app.secret_key = get_key(SECRET_KEY_FILENAME)
@@ -846,6 +844,8 @@ if __name__ == "__main__":
     if not os.path.exists(file_location(database_file)):
         db.create_all()
 
+
+if __name__ == "__main__":
     if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
         if not os.path.exists(file_location("google_client_details.txt")):
             exit("Google client details missing from environment and file.")
