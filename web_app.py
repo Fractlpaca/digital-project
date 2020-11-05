@@ -837,12 +837,12 @@ def editProject(project_id_string):
 #Setup and read neccessary files
 
 if not os.path.exists(file_location(SECRET_KEY_FILENAME)):
-        #Create session secret key
-        generate_key(SECRET_KEY_FILENAME, 24)
-    app.secret_key = get_key(SECRET_KEY_FILENAME)
+    #Create session secret key
+    generate_key(SECRET_KEY_FILENAME, 24)
+app.secret_key = get_key(SECRET_KEY_FILENAME)
 
-    if not os.path.exists(file_location(database_file)):
-        db.create_all()
+if not os.path.exists(file_location(database_file)):
+    db.create_all()
 
 
 if __name__ == "__main__":
