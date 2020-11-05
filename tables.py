@@ -143,10 +143,10 @@ class Projects(db.Model):
         Sets the authors of the project.
         Authors are stored as a comma-separated strings from the 'authors' list.
         """
-        author_list = set(author.strip() for author in authors.split(","))
-        if "" in tag_set:
-            tag_set.remove("")
-        self.authors=','.join(sorted(author_list))
+        author_set = set(author.strip() for author in authors.split(","))
+        if "" in author_set:
+            author_set.remove("")
+        self.authors=','.join(sorted(author_set))
         db.session.commit()
         self.update_time()   
     
