@@ -112,8 +112,8 @@ def login_callback():
     if userinfo_response.json().get("email_verified"):
         unique_id = userinfo_response.json()["sub"]
         users_email = userinfo_response.json()["email"]
-        #if users_email.split("@")[1] not in ALLOWED_EMAIL_DOMAINS:
-        #    return "Account not allowed.", 400
+        if users_email.split("@")[1] not in ALLOWED_EMAIL_DOMAINS:
+            return "Please log in with a school account.", 400
         picture = userinfo_response.json()["picture"]
         users_name = userinfo_response.json()["name"]
     else:
@@ -123,7 +123,7 @@ def login_callback():
 
     #Check if user exists:
     user = Users.query.filter_by(user_id=unique_id).first()
-    
+
     if user is None:
         #Create user
         user = Users(user_id=unique_id,
@@ -132,7 +132,7 @@ def login_callback():
                     profile_pic_url=picture)
         db.session.add(user)
         db.session.commit()
-    
+
     #Log user in
 
     login_user(user, remember=True)
@@ -163,16 +163,16 @@ def dashboard():
     projects_owned = current_user.projects_owned
     #Sort projects by latest first
     projects_owned.sort(key=lambda x:x.time_updated, reverse=True)
-    
+
     #Filter project permissions for shared projects
     projects_shared = ProjectPermissions.query.filter(ProjectPermissions.user_id==user_id, CAN_VIEW <= ProjectPermissions.access_level, ProjectPermissions.access_level< OWNER).all()
-    
+
     #Extract projects from project permissions
     projects_shared = [project_access.project for project_access in projects_shared]
-    
+
     #Sort projects by latest first
     projects_shared.sort(key=lambda x:x.time_updated, reverse=True)
-    
+
     #Public projects
     #other_projects = Projects.query.filter(or_(Projects.default_access >= CAN_VIEW,Projects.student_access >= CAN_VIEW)).order_by(Projects.time_updated.desc()).all()
     return render_template("dash.html",
@@ -211,7 +211,7 @@ def search():
     return render_template("search.html",
                            is_logged_in=is_logged_in,
                            user=user,
-                           results=results)  
+                           results=results)
 
 
 
@@ -292,11 +292,11 @@ def deleteProject():
     project_id_string = request.form.get("project_id",None)
     if project_id_string is None:
         abort(404)
-    
+
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, OWNER)
     if project is None:
         abort(404)
-    
+
     db.session.delete(project)
     db.session.commit()
 
@@ -304,7 +304,7 @@ def deleteProject():
     shutil.rmtree(project_folder)
 
     return redirect(url_for("dashboard"))
-    
+
 
 
 
@@ -337,7 +337,7 @@ def comment(project_id_string):
     if project is None:
         abort(404)
     route = f"/project/{project.project_id}"
-    
+
     new_comment_text = request.form.get("text", None)
     current_time = get_current_time()
     if new_comment_text is not None and new_comment_text != "":
@@ -369,7 +369,7 @@ def deleteComment(project_id_string):
     #Only mods/admins can delete comments
     if current_user.site_access < MOD:
         abort(403)
-    
+
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, NO_ACCESS)
     if project is None:
         abort(404)
@@ -385,7 +385,7 @@ def deleteComment(project_id_string):
         db.session.commit()
     else:
         return "Comment could not be found.", 404
-    
+
     return "OK"
 
 
@@ -400,7 +400,7 @@ def upload_content(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
     if project is None:
         abort(404)
-    
+
     route = f"/project/{project.project_id}"
     project_folder = project.folder()
 
@@ -411,9 +411,9 @@ def upload_content(project_id_string):
     if content_type == "game":
         if file.mimetype != "application/zip":
             return "WebGL content must be a zip file.", 400
-        webgl_folder = os.path.join(project_folder,"webgl")     
+        webgl_folder = os.path.join(project_folder,"webgl")
 
-        #Delete contents of webgl folder       
+        #Delete contents of webgl folder
         shutil.rmtree(webgl_folder, ignore_errors=True)
         os.mkdir(webgl_folder)
 
@@ -425,13 +425,13 @@ def upload_content(project_id_string):
         if is_zipfile(os.path.join(webgl_folder, "webgl_game.zip")):
             zipped_file = ZipFile(file_path, "r")
             zipped_file.extractall(path=webgl_folder)
-        
+
         project.update_time()
 
         current_time=get_current_time().strftime("%s")
         ajax_response= f'<iframe id="player" src="/project/{project.project_id}/webgl?t={current_time}" title="Player"></iframe>'
         return ajax_response
-    
+
     return "Unknown content type.", 400
 
 
@@ -445,7 +445,7 @@ def upload_download(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_EDIT)
     if project is None:
         abort(404)
-    
+
     route = f"/project/{project.project_id}"
     project_folder = project.folder()
     file = request.files.get("file",None)
@@ -459,14 +459,14 @@ def upload_download(project_id_string):
         os.mkdir(download_folder)
 
     filename = request.form.get("filename", None)
-    filename = secure_filename(filename or file.filename) 
+    filename = secure_filename(filename or file.filename)
     filename = project.unique_download_filename(filename)
-    
+
     file_path = os.path.join(download_folder, filename)
     file.save(file_path)
     download_data = (filename, current_user.name, datetime.now(timezone.utc))
     project.add_download_info(download_data)
-    
+
     return render_template( "ajax_responses/download.html",
                             filename=filename,
                             username=current_user.name,
@@ -487,7 +487,7 @@ def webGL(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
-    
+
     if not os.path.exists(f"{PROJECTS_FOLDER}/{project.project_id}/webgl/index.html"):
         #The game files are missing.
         return "<i>Sorry, there is nothing to display.</i>"
@@ -528,7 +528,7 @@ def download(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, CAN_VIEW)
     if project is None:
         abort(404)
-    project_dir = project.folder()   
+    project_dir = project.folder()
     download_folder = os.path.join(PROJECTS_FOLDER,"downloads")
     download = project.get_download(request.form.get("filename",""))
     if download is None:
@@ -562,7 +562,7 @@ def projectAccess(project_id_string):
     """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
-        abort(404) 
+        abort(404)
     route = f"/project/{project.project_id}"
     if request.form:
         added_email = request.form.get("email", None)
@@ -573,7 +573,7 @@ def projectAccess(project_id_string):
         added_user = Users.query.filter_by(email=added_email).first()
         if added_user is None:
             return "User has not registered with that email.", 404
-        
+
         existing_access = project.access_level(added_user)
         if existing_access >= access_level:
             return VIOLATION_ERROR
@@ -589,7 +589,7 @@ def projectAccess(project_id_string):
             user_access=user_access,
             access_descriptions=access_descriptions,
             access_from_string=access_from_string)
-    
+
     else:
         return "Form not recieved, please reload."
 
@@ -604,7 +604,7 @@ def deleteProjectAccess(project_id_string):
     """
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
-        abort(404) 
+        abort(404)
     route = f"/project/{project.project_id}"
     if request.form:
         access_id = request.form.get("access_id", None)
@@ -618,7 +618,7 @@ def deleteProjectAccess(project_id_string):
                 db.session.delete(existing_access)
                 db.session.commit()
                 return "OK"
-    
+
     return "User not found.", 404
 
 
@@ -635,7 +635,7 @@ def create_share_link(project_id_string):
     if project is None:
         abort(404)
     route = project.route()
-    
+
     form = request.form
     access_string = form.get("access", None)
     access_level_granted = access_from_string.get(access_string, None)
@@ -659,7 +659,7 @@ def create_share_link(project_id_string):
             duration = timedelta(days=days, hours=hours, minutes=minutes)
         except ValueError:
             duration = timedelta(days=7)
-        
+
         time_expires = current_time + duration
     else:
         time_expires = None
@@ -670,7 +670,7 @@ def create_share_link(project_id_string):
                             time_created=current_time,
                             time_expires=time_expires,
                             user_limit=user_limit)
-    
+
     project.update_time()
     db.session.add(share_link)
     db.session.commit()
@@ -693,7 +693,7 @@ def delete_share_link(project_id_string):
     if project is None:
         abort(404)
     route = project.route()
-    
+
     form = request.form
     share_link_url = form.get("share_link_url", None)
     if share_link_url is None:
@@ -703,12 +703,12 @@ def delete_share_link(project_id_string):
         return "Link not found", 404
     if share_link.project_id != project.project_id:
         return "Link not found", 404
-    
+
     db.session.delete(share_link)
     db.session.commit()
     return "OK"
 
-    
+
 
 
 @app.route("/project/<project_id_string>/invite/<invite_string>")
@@ -736,7 +736,7 @@ def invite(project_id_string, invite_string):
     existing_access = project.access_level(current_user)
     if share_link.access_level_granted <= existing_access:
         return redirect(route)
-    
+
     share_link.times_used += 1
     project.assign_project_access(current_user.user_id, min(SUB_OWNER, share_link.access_level_granted))
     db.session.commit()
@@ -754,7 +754,7 @@ def simpleShare(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)
-    
+
     setting = request.form.get("setting", None)
     if setting in ["private","school","public"]:
         if setting == "private":
@@ -783,7 +783,7 @@ def editProject(project_id_string):
     project, access_level, is_logged_in=handle_project_id_string(project_id_string, SUB_OWNER)
     if project is None:
         abort(404)
-    
+
     if request.method == "POST":
         form = request.form
         title = form.get("title", "")
@@ -792,7 +792,7 @@ def editProject(project_id_string):
             project.update_time()
             db.session.commit()
             return "OK"
-        
+
         authors = form.get("authors", "")
         if authors != "":
             project.set_authors(authors)
@@ -802,12 +802,12 @@ def editProject(project_id_string):
         if description != "":
             project.set_description(description)
             return "OK"
-        
+
         tags = form.get("tags", "")
         if tags != "":
             project.set_tags(tags)
             return render_template("ajax_responses/paragraph_list.html", items=project.tags.split(","))
-        
+
         thumbnail_file = request.files.get("thumbnail")
 
         new_thumbnail_path = os.path.join(project.folder(), "new_thumbnail")
@@ -829,8 +829,8 @@ def editProject(project_id_string):
             else:
                 #Thumbnail not saved.
                 return "Invalid file type.", 400
-        
-    
+
+
     return "Request not understood. Try reloading.", 400
 
 
@@ -849,17 +849,17 @@ if __name__ == "__main__":
     if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
         if not os.path.exists(file_location("google_client_details.txt")):
             exit("Google client details missing from environment and file.")
-        
+
         try:
             google_client_details_file = open("google_client_details.txt","r")
             GOOGLE_CLIENT_ID = google_client_details_file.readline().strip().rstrip()
             GOOGLE_CLIENT_SECRET = google_client_details_file.readline().strip().rstrip()
         except:
             exit("Error reading google client details file.")
-        
+
         if not (GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET):
             exit("Invalid google client details.")
-    
+
     #print(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,flush=True)
 
     app.run(ssl_context='adhoc', debug=True)

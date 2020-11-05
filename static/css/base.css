@@ -151,6 +151,7 @@ div.project_link div{
 div.project_link button.delete{
     display: none;
     float: right;
+    margin: 10px;
 }
 
 div.project_link:hover > button.delete{
